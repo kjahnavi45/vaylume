@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | VAYLUME - Sovereign Private Vault</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <!-- Floating Header -->
+  <header class="site-header" role="banner">
+    <div class="container nav-container">
+      <a href="index.html" class="brand-logo" aria-label="VAYLUME Home">
+        <span class="brand-icon">V</span>
+        <span>VAYLUME</span>
+      </a>
+
+      <div class="nav-actions">
+        <!-- Language Switcher -->
+        <div class="lang-selector-wrapper">
+          <button type="button" class="lang-btn" aria-haspopup="true" aria-expanded="false" id="login-lang-btn">
+            <span>🌐</span>
+            <span id="current-lang-text">English</span>
+            <span style="font-size: 0.75rem;">▼</span>
+          </button>
+          <div class="lang-dropdown-menu" role="menu" aria-labelledby="login-lang-btn"></div>
+        </div>
+
+        <a href="signup.html" class="btn btn-outline btn-sm">Create Account</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth-wrapper">
+    <div class="auth-split-wrapper">
+      
+      <!-- Art / Brand Column -->
+      <div class="auth-art-column">
+        <div>
+          <a href="index.html" class="brand-logo" style="margin-bottom: 24px;">
+            <span class="brand-icon">V</span>
+            <span>VAYLUME</span>
+          </a>
+          <p class="hero-tagline text-gradient" style="font-size: 1.15rem; margin-bottom: 16px;" data-i18n="brand_tagline">
+            Your Memories. Your Knowledge. Your Digital Life.
+          </p>
+          <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.6;">
+            Access your private, encrypted digital sanctuary. All stored data is shielded behind client-side cryptographic isolation.
+          </p>
+        </div>
+
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 18px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+            <span style="color: var(--emerald-400); font-size: 1.2rem;">🔒</span>
+            <strong style="font-size: 0.9rem;">Zero-Knowledge Authentication</strong>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">
+            No credentials or unencrypted records are shared with third-party tracking services.
+          </p>
+        </div>
+      </div>
+
+      <!-- Login Form Column -->
+      <div class="auth-form-column">
+        <h1 class="auth-title">Welcome Back</h1>
+        <p class="auth-subtitle">Enter your credentials to unlock your private space.</p>
+
+        <form id="login-form" novalidate>
+          
+          <!-- Email Input -->
+          <div class="form-group" id="group-login-email">
+            <label for="login-email" class="form-label">
+              Email Address <span class="required" aria-hidden="true">*</span>
+            </label>
+            <div class="input-icon-wrapper">
+              <span class="input-icon" aria-hidden="true">✉️</span>
+              <input 
+                type="email" 
+                id="login-email" 
+                name="email" 
+                class="form-control" 
+                placeholder="name@example.com" 
+                required 
+                autocomplete="email"
+              >
+            </div>
+            <div class="form-error" role="alert"></div>
+          </div>
+
+          <!-- Password Input -->
+          <div class="form-group" id="group-login-password">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label for="login-password" class="form-label" style="margin-bottom: 0;">
+                Password <span class="required" aria-hidden="true">*</span>
+              </label>
+              <a href="#" id="forgot-password-link" style="font-size: 0.82rem; color: var(--cyan-400);">
+                Forgot Password?
+              </a>
+            </div>
+            <div class="input-icon-wrapper">
+              <span class="input-icon" aria-hidden="true">🔑</span>
+              <input 
+                type="password" 
+                id="login-password" 
+                name="password" 
+                class="form-control" 
+                placeholder="Enter your password" 
+                required 
+                autocomplete="current-password"
+              >
+              <button type="button" class="input-toggle-password" aria-label="Show password">👁️</button>
+            </div>
+            <div class="form-error" role="alert"></div>
+          </div>
+
+          <!-- Remember Me -->
+          <div class="form-group">
+            <label class="form-checkbox">
+              <input type="checkbox" id="remember-me" checked>
+              <span>Keep my cryptographic session active on this device</span>
+            </label>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" id="login-submit-btn" class="btn btn-primary" style="width: 100%; padding: 13px;">
+            Login to VAYLUME →
+          </button>
+
+          <!-- Alternative Link -->
+          <div style="text-align: center; margin-top: 24px; font-size: 0.9rem; color: var(--text-secondary);">
+            Don't have a private space yet? 
+            <a href="signup.html" style="color: var(--cyan-400); font-weight: 600;">Create Account</a>
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Forgot Password Accessible Modal -->
+  <div class="modal-backdrop" id="forgot-password-modal" role="dialog" aria-modal="true" aria-labelledby="fp-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="fp-title" class="modal-title">Reset Vault Access Key</h3>
+        <button type="button" class="modal-close" onclick="window.closeModal('forgot-password-modal')" aria-label="Close dialog">×</button>
+      </div>
+      <form id="forgot-password-form">
+        <div class="modal-body">
+          <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 18px;">
+            Enter the verified email linked to your VAYLUME account. We will dispatch a single-use cryptographic recovery link and OTP.
+          </p>
+          <div class="form-group">
+            <label for="forgot-email" class="form-label">Account Email <span class="required">*</span></label>
+            <div class="input-icon-wrapper">
+              <span class="input-icon">✉️</span>
+              <input type="email" id="forgot-email" class="form-control" placeholder="aarav.sharma@example.com" required>
+            </div>
+            <div class="form-error"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="window.closeModal('forgot-password-modal')">Cancel</button>
+          <button type="submit" id="forgot-submit-btn" class="btn btn-primary">Send Recovery Link</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>

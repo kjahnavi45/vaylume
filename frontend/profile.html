@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile & Security | VAYLUME</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <div class="app-layout">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar" role="navigation" aria-label="Sidebar Navigation">
+      <div class="sidebar-header">
+        <a href="dashboard.html" class="brand-logo">
+          <span class="brand-icon">V</span>
+          <span>VAYLUME</span>
+        </a>
+      </div>
+
+      <div class="sidebar-nav">
+        <div class="nav-section-title">Private Vault</div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="dashboard.html" class="sidebar-link">
+              <span class="menu-icon">📊</span>
+              <span data-i18n="nav_dashboard">Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="memories.html" class="sidebar-link">
+              <span class="menu-icon">📸</span>
+              <span data-i18n="nav_memories">Memories</span>
+            </a>
+          </li>
+          <li>
+            <a href="notes.html" class="sidebar-link">
+              <span class="menu-icon">🤖</span>
+              <span data-i18n="nav_notes">AI Notes</span>
+            </a>
+          </li>
+          <li>
+            <a href="locker.html" class="sidebar-link">
+              <span class="menu-icon">📁</span>
+              <span data-i18n="nav_locker">Digital Locker</span>
+            </a>
+          </li>
+        </ul>
+
+        <div class="nav-section-title" style="margin-top: 24px;">Account & Security</div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="profile.html" class="sidebar-link active">
+              <span class="menu-icon">👤</span>
+              <span data-i18n="nav_profile">Profile & Settings</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-link btn-logout-trigger">
+              <span class="menu-icon">🚪</span>
+              <span data-i18n="nav_logout">Logout</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- User Info Card in Sidebar Bottom -->
+      <div class="sidebar-footer">
+        <div class="sidebar-user-card">
+          <div class="user-avatar">AS</div>
+          <div class="user-info">
+            <div class="user-name display-user-name">Aarav Sharma</div>
+            <div class="user-role display-user-role">Member • English</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="app-main">
+      
+      <!-- Topbar Header -->
+      <header class="app-topbar">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <button type="button" class="btn-icon sidebar-toggle-btn mobile-nav-toggle" aria-label="Toggle Navigation Drawer">
+            ☰
+          </button>
+          <div style="font-weight: 600; font-size: 1rem;">Vault Settings & Identity</div>
+        </div>
+
+        <div class="topbar-actions">
+          <!-- Global Language Selector Dropdown -->
+          <div class="lang-selector-wrapper">
+            <button type="button" class="lang-btn" aria-haspopup="true" aria-expanded="false" id="profile-lang-btn">
+              <span>🌐</span>
+              <span id="current-lang-text">English</span>
+              <span style="font-size: 0.75rem;">▼</span>
+            </button>
+            <div class="lang-dropdown-menu" role="menu" aria-labelledby="profile-lang-btn"></div>
+          </div>
+
+          <button type="button" class="btn btn-secondary btn-sm btn-logout-trigger">
+            🚪 Logout
+          </button>
+        </div>
+      </header>
+
+      <!-- Profile Workspace -->
+      <div class="app-body">
+        
+        <div style="margin-bottom: 24px;">
+          <h1 style="font-size: 1.85rem; margin-bottom: 6px;">Profile & Security Center</h1>
+          <p style="font-size: 0.95rem; color: var(--text-muted);">
+            Manage your personal identity details, language preferences, and zero-knowledge cryptographic safeguards.
+          </p>
+        </div>
+
+        <div class="profile-grid">
+          
+          <!-- Column 1: Profile Summary Card & Storage Breakdown -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            
+            <div class="card profile-hero-card">
+              <div class="profile-hero-avatar" id="profile-hero-avatar">AS</div>
+              <h3 class="profile-hero-name" id="profile-hero-name">Aarav Sharma</h3>
+              <div class="profile-hero-email" id="profile-hero-email">aarav.sharma@example.com</div>
+              <span class="badge badge-cyan" id="profile-hero-joined">Member since October 2026</span>
+
+              <div style="border-top: 1px solid var(--border-subtle); margin-top: 20px; padding-top: 20px; text-align: left;">
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">CRYPTOGRAPHIC VAULT STATUS</div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="color: var(--emerald-400); font-size: 1rem;">●</span>
+                  <span style="font-size: 0.9rem; font-weight: 600;">Active & Encrypted</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Vault Storage Allocation -->
+            <div class="card">
+              <div class="card-header">
+                <h4 class="card-title" style="font-size: 1rem;">Vault Storage Quota</h4>
+                <span class="badge badge-emerald" id="profile-storage-percent">3% used</span>
+              </div>
+              <div style="margin-bottom: 12px;">
+                <div id="profile-storage-used-val" style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px;">142 MB / 5 GB</div>
+                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden;">
+                  <div id="profile-storage-bar" style="height: 100%; width: 3%; background: var(--gradient-brand);"></div>
+                </div>
+              </div>
+              <p style="font-size: 0.78rem; color: var(--text-muted);">
+                Generous 5 GB encrypted tier for memories, multilingual AI notes, and confidential documents.
+              </p>
+            </div>
+
+            <!-- Data Portability Button -->
+            <div class="card">
+              <h4 style="font-size: 1rem; margin-bottom: 8px;">Data Portability</h4>
+              <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 16px;">
+                Download your entire private vault data including memories, notes, and file metadata into an open JSON backup.
+              </p>
+              <button type="button" id="btn-export-all-data" class="btn btn-secondary btn-sm" style="width: 100%;">
+                📦 Export Full Vault (JSON)
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Column 2: Personal Details Form, Security & Danger Zone -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            
+            <!-- Personal Information Form -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">👤 Personal Details</h3>
+                <span class="badge badge-cyan">Profile</span>
+              </div>
+
+              <form id="profile-edit-form">
+                <div class="form-group">
+                  <label for="profile-name" class="form-label">Full Name <span class="required">*</span></label>
+                  <input type="text" id="profile-name" class="form-control" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                  <div class="form-group">
+                    <label for="profile-email" class="form-label">Email Address <span class="required">*</span></label>
+                    <input type="email" id="profile-email" class="form-control" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="profile-phone" class="form-label">Phone Number</label>
+                    <input type="tel" id="profile-phone" class="form-control">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="profile-language" class="form-label">Default Language for AI & System</label>
+                  <select id="profile-language" class="form-select form-control">
+                    <!-- Populated dynamically by profile.js -->
+                  </select>
+                  <div class="form-help">Sets the default language across the dashboard and AI generation.</div>
+                </div>
+
+                <div class="form-group">
+                  <label for="profile-bio" class="form-label">Personal Note / Bio</label>
+                  <textarea id="profile-bio" class="form-control" placeholder="A short personal reflection..."></textarea>
+                </div>
+
+                <button type="submit" id="profile-save-btn" class="btn btn-primary">
+                  Save Changes
+                </button>
+              </form>
+            </div>
+
+            <!-- Security Preferences & Two-Factor -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">🛡️ Security & Access Control</h3>
+                <span class="badge badge-emerald">Encrypted</span>
+              </div>
+
+              <div>
+                <div class="security-switch-row">
+                  <div>
+                    <div class="security-switch-label">Two-Factor Authentication (2FA)</div>
+                    <div class="security-switch-desc">Require an authenticator app TOTP code upon login.</div>
+                  </div>
+                  <label class="form-checkbox">
+                    <input type="checkbox" id="security-2fa-switch" checked>
+                  </label>
+                </div>
+
+                <div class="security-switch-row">
+                  <div>
+                    <div class="security-switch-label">Biometric / FIDO2 Passkey Access</div>
+                    <div class="security-switch-desc">Allow WebAuthn fingerprint, Face ID, or security key unlock.</div>
+                  </div>
+                  <label class="form-checkbox">
+                    <input type="checkbox" id="security-biometric-switch">
+                  </label>
+                </div>
+              </div>
+
+              <!-- Password Update Sub-form -->
+              <div style="margin-top: 24px;">
+                <h4 style="font-size: 1rem; margin-bottom: 12px;">Change Master Password</h4>
+                <form id="profile-password-form">
+                  <div class="form-group">
+                    <label for="curr-password" class="form-label">Current Password <span class="required">*</span></label>
+                    <input type="password" id="curr-password" class="form-control" placeholder="Enter existing password" required>
+                  </div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                      <label for="new-password" class="form-label">New Password <span class="required">*</span></label>
+                      <input type="password" id="new-password" class="form-control" placeholder="At least 8 characters" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="confirm-new-password" class="form-label">Confirm New Password <span class="required">*</span></label>
+                      <input type="password" id="confirm-new-password" class="form-control" placeholder="Re-enter password" required>
+                    </div>
+                  </div>
+                  <button type="submit" class="btn btn-secondary">
+                    Update Master Key
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="card" style="border-color: rgba(244, 63, 94, 0.3); background: rgba(244, 63, 94, 0.02);">
+              <div class="card-header">
+                <h3 class="card-title text-rose">⚠️ Danger Zone</h3>
+                <span class="badge badge-amber">Irreversible</span>
+              </div>
+              <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 18px;">
+                Permanently purge your VAYLUME sanctuary, decrypting keys, uploaded memories, AI notes, and digital locker records. This cannot be undone.
+              </p>
+              <button type="button" id="btn-delete-account" class="btn btn-danger">
+                🗑️ Destroy Vault & Delete Account
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/profile.js"></script>
+</body>
+</html>

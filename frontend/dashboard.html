@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | VAYLUME</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <div class="app-layout">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar" role="navigation" aria-label="Sidebar Navigation">
+      <div class="sidebar-header">
+        <a href="dashboard.html" class="brand-logo">
+          <span class="brand-icon">V</span>
+          <span>VAYLUME</span>
+        </a>
+      </div>
+
+      <div class="sidebar-nav">
+        <div class="nav-section-title">Private Vault</div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="dashboard.html" class="sidebar-link active">
+              <span class="menu-icon">📊</span>
+              <span data-i18n="nav_dashboard">Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="memories.html" class="sidebar-link">
+              <span class="menu-icon">📸</span>
+              <span data-i18n="nav_memories">Memories</span>
+              <span class="sidebar-badge" id="stat-memories-count-badge">3</span>
+            </a>
+          </li>
+          <li>
+            <a href="notes.html" class="sidebar-link">
+              <span class="menu-icon">🤖</span>
+              <span data-i18n="nav_notes">AI Notes</span>
+              <span class="sidebar-badge" style="background: rgba(168, 85, 247, 0.2); color: var(--violet-400);">10 Langs</span>
+            </a>
+          </li>
+          <li>
+            <a href="locker.html" class="sidebar-link">
+              <span class="menu-icon">📁</span>
+              <span data-i18n="nav_locker">Digital Locker</span>
+              <span class="sidebar-badge" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald-400);">AES-256</span>
+            </a>
+          </li>
+        </ul>
+
+        <div class="nav-section-title" style="margin-top: 24px;">Account & Security</div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="profile.html" class="sidebar-link">
+              <span class="menu-icon">👤</span>
+              <span data-i18n="nav_profile">Profile & Settings</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="sidebar-link btn-logout-trigger">
+              <span class="menu-icon">🚪</span>
+              <span data-i18n="nav_logout">Logout</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- User Info Card in Sidebar Bottom -->
+      <div class="sidebar-footer">
+        <div class="sidebar-user-card">
+          <div class="user-avatar">AS</div>
+          <div class="user-info">
+            <div class="user-name display-user-name">Aarav Sharma</div>
+            <div class="user-role display-user-role">Member • English</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- App Main Body -->
+    <main class="app-main">
+      
+      <!-- Topbar Header -->
+      <header class="app-topbar">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <button type="button" class="btn-icon sidebar-toggle-btn mobile-nav-toggle" aria-label="Toggle Navigation Drawer">
+            ☰
+          </button>
+          <div class="topbar-search">
+            <div class="input-icon-wrapper">
+              <span class="input-icon">🔍</span>
+              <input type="text" class="form-control" placeholder="Search memories, notes, locker..." data-i18n="search_placeholder" style="padding: 8px 14px 8px 38px; font-size: 0.88rem;">
+            </div>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <!-- Global Language Selector Dropdown -->
+          <div class="lang-selector-wrapper">
+            <button type="button" class="lang-btn" aria-haspopup="true" aria-expanded="false" id="dash-lang-btn">
+              <span>🌐</span>
+              <span id="current-lang-text">English</span>
+              <span style="font-size: 0.75rem;">▼</span>
+            </button>
+            <div class="lang-dropdown-menu" role="menu" aria-labelledby="dash-lang-btn"></div>
+          </div>
+
+          <!-- Profile Link -->
+          <a href="profile.html" class="btn-icon" title="My Profile" aria-label="User Profile">
+            👤
+          </a>
+        </div>
+      </header>
+
+      <!-- Dashboard Main View -->
+      <div class="app-body">
+        
+        <!-- Welcome Hero Section -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; margin-bottom: 30px;">
+          <div>
+            <h1 id="dashboard-greeting-title" style="font-size: clamp(1.8rem, 3vw, 2.4rem); margin-bottom: 6px;">
+              Welcome back, <span class="text-gradient display-user-name">Aarav</span>
+            </h1>
+            <p id="dashboard-date-subtitle" style="font-size: 0.95rem; color: var(--text-muted);">
+              October 2026 • Your private sanctuary is synchronized and protected.
+            </p>
+          </div>
+
+          <!-- Quick Action Buttons Header -->
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary" onclick="window.openModal('quick-add-memory-modal')">
+              + Add Memory
+            </button>
+            <a href="notes.html" class="btn btn-secondary">
+              ⚡ Generate Note
+            </a>
+            <button type="button" class="btn btn-secondary" onclick="window.openModal('quick-upload-doc-modal')">
+              📁 Upload Document
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric Stat Cards -->
+        <div class="stats-grid">
+          
+          <!-- Card 1: Secure Memories -->
+          <div class="stat-card card-interactive" onclick="window.location.href='memories.html'" style="cursor: pointer;">
+            <div class="stat-icon cyan">📸</div>
+            <div>
+              <div class="stat-value" id="stat-memories-count">3</div>
+              <div class="stat-label">Secure Memories Preserved</div>
+            </div>
+            <span class="badge badge-cyan" style="position: absolute; top: 16px; right: 16px;">View →</span>
+          </div>
+
+          <!-- Card 2: AI Notes Generated -->
+          <div class="stat-card card-interactive" onclick="window.location.href='notes.html'" style="cursor: pointer;">
+            <div class="stat-icon violet">🤖</div>
+            <div>
+              <div class="stat-value" id="stat-notes-count">2</div>
+              <div class="stat-label">AI Notes in 10 Languages</div>
+            </div>
+            <span class="badge badge-violet" style="position: absolute; top: 16px; right: 16px;">Explore →</span>
+          </div>
+
+          <!-- Card 3: Digital Locker Documents -->
+          <div class="stat-card card-interactive" onclick="window.location.href='locker.html'" style="cursor: pointer;">
+            <div class="stat-icon emerald">📁</div>
+            <div>
+              <div class="stat-value" id="stat-docs-count">4</div>
+              <div class="stat-label">Encrypted Documents</div>
+            </div>
+            <span class="badge badge-emerald" style="position: absolute; top: 16px; right: 16px;">Open Vault →</span>
+          </div>
+
+          <!-- Card 4: Vault Storage Quota -->
+          <div class="stat-card">
+            <div class="stat-icon amber">🛡️</div>
+            <div style="flex: 1;">
+              <div class="stat-value" id="stat-storage-used" style="font-size: 1.3rem;">142 MB / 5 GB</div>
+              <div class="stat-label">Vault Storage (Zero-Knowledge)</div>
+              <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 99px; margin-top: 8px; overflow: hidden;">
+                <div id="dashboard-storage-bar" style="height: 100%; width: 3%; background: var(--gradient-brand);"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Quick Access Dashboard Workspace -->
+        <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; align-items: start;">
+          
+          <!-- Recent Activity Timeline -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Recent Activity</h3>
+              <span class="badge badge-cyan">Live Sync</span>
+            </div>
+            <div class="activity-list" id="recent-activity-list">
+              <!-- Dynamically populated by dashboard.js -->
+            </div>
+          </div>
+
+          <!-- Quick Actions & Multilingual Preview -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            
+            <!-- Quick Actions Hub -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title" data-i18n="quick_actions">Quick Actions</h3>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button type="button" class="btn btn-secondary" style="justify-content: flex-start; text-align: left;" onclick="window.openModal('quick-add-memory-modal')">
+                  <span style="font-size: 1.2rem;">📸</span>
+                  <div>
+                    <div style="font-weight: 600; font-size: 0.9rem;">Capture New Memory</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Save photos, stories, and emotions</div>
+                  </div>
+                </button>
+
+                <a href="notes.html" class="btn btn-secondary" style="justify-content: flex-start; text-align: left;">
+                  <span style="font-size: 1.2rem;">⚡</span>
+                  <div>
+                    <div style="font-weight: 600; font-size: 0.9rem;">Generate AI Learning Note</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">In Telugu, Hindi, Tamil, English & more</div>
+                  </div>
+                </a>
+
+                <button type="button" class="btn btn-secondary" style="justify-content: flex-start; text-align: left;" onclick="window.openModal('quick-upload-doc-modal')">
+                  <span style="font-size: 1.2rem;">📁</span>
+                  <div>
+                    <div style="font-weight: 600; font-size: 0.9rem;">Store Confidential Document</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Identity, Degree, or Career Records</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Language Readiness Spotlight -->
+            <div class="card" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(13, 17, 29, 0.8) 100%); border-color: rgba(168, 85, 247, 0.25);">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <span style="font-size: 1.4rem;">🌍</span>
+                <h4 style="font-size: 1.05rem;">Multilingual AI Active</h4>
+              </div>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 14px;">
+                Your AI assistant is prepared to generate detailed study notes, code explanations, and summaries in 10 supported languages.
+              </p>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                <span class="badge badge-violet">తెలుగు</span>
+                <span class="badge badge-violet">हिन्दी</span>
+                <span class="badge badge-violet">தமிழ்</span>
+                <span class="badge badge-violet">ಕನ್ನಡ</span>
+                <span class="badge badge-violet">বাংলা</span>
+                <span class="badge badge-violet">+ 5 more</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Quick Add Memory Modal -->
+  <div class="modal-backdrop" id="quick-add-memory-modal" role="dialog" aria-modal="true" aria-labelledby="qam-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="qam-title" class="modal-title">+ Add New Memory</h3>
+        <button type="button" class="modal-close" onclick="window.closeModal('quick-add-memory-modal')" aria-label="Close dialog">×</button>
+      </div>
+      <form id="quick-add-memory-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="quick-memory-title" class="form-label">Memory Title <span class="required">*</span></label>
+            <input type="text" id="quick-memory-title" class="form-control" placeholder="E.g., Stargazing Night in Manali" required>
+          </div>
+          <div class="form-group">
+            <label for="quick-memory-desc" class="form-label">Description / Reflection</label>
+            <textarea id="quick-memory-desc" class="form-control" placeholder="Write what made this moment unforgettable..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="quick-memory-date" class="form-label">Date</label>
+            <input type="date" id="quick-memory-date" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="window.closeModal('quick-add-memory-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Memory Securely</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Quick Upload Document Modal -->
+  <div class="modal-backdrop" id="quick-upload-doc-modal" role="dialog" aria-modal="true" aria-labelledby="qud-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="qud-title" class="modal-title">📁 Upload Document to Locker</h3>
+        <button type="button" class="modal-close" onclick="window.closeModal('quick-upload-doc-modal')" aria-label="Close dialog">×</button>
+      </div>
+      <form id="quick-upload-doc-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="quick-doc-title" class="form-label">Document Title <span class="required">*</span></label>
+            <input type="text" id="quick-doc-title" class="form-control" placeholder="E.g., Passport Copy 2026" required>
+          </div>
+          <div class="form-group">
+            <label for="quick-doc-category" class="form-label">Category <span class="required">*</span></label>
+            <select id="quick-doc-category" class="form-select form-control" required>
+              <option value="Identity">Identity</option>
+              <option value="Education">Education</option>
+              <option value="Certificates">Certificates</option>
+              <option value="Career">Career</option>
+              <option value="Personal">Personal</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="quick-doc-file" class="form-label">Select File (PDF, Image, Doc)</label>
+            <input type="file" id="quick-doc-file" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="window.closeModal('quick-upload-doc-modal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Encrypt & Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

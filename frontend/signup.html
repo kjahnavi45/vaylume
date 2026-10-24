@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account | VAYLUME - Sovereign Private Vault</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <!-- Floating Header -->
+  <header class="site-header" role="banner">
+    <div class="container nav-container">
+      <a href="index.html" class="brand-logo" aria-label="VAYLUME Home">
+        <span class="brand-icon">V</span>
+        <span>VAYLUME</span>
+      </a>
+
+      <div class="nav-actions">
+        <!-- Language Switcher -->
+        <div class="lang-selector-wrapper">
+          <button type="button" class="lang-btn" aria-haspopup="true" aria-expanded="false" id="signup-header-lang-btn">
+            <span>🌐</span>
+            <span id="current-lang-text">English</span>
+            <span style="font-size: 0.75rem;">▼</span>
+          </button>
+          <div class="lang-dropdown-menu" role="menu" aria-labelledby="signup-header-lang-btn"></div>
+        </div>
+
+        <a href="login.html" class="btn btn-outline btn-sm">Sign In</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="auth-wrapper">
+    <div class="auth-split-wrapper" style="max-width: 1040px;">
+      
+      <!-- Art Column -->
+      <div class="auth-art-column">
+        <div>
+          <a href="index.html" class="brand-logo" style="margin-bottom: 24px;">
+            <span class="brand-icon">V</span>
+            <span>VAYLUME</span>
+          </a>
+          <p class="hero-tagline text-gradient" style="font-size: 1.15rem; margin-bottom: 16px;" data-i18n="brand_tagline">
+            Your Memories. Your Knowledge. Your Digital Life.
+          </p>
+          <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px;">
+            Join a new paradigm of digital dignity. Store personal memories, generate AI notes in your chosen language, and secure your documents with zero public exposure.
+          </p>
+
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 12px; font-size: 0.88rem; color: var(--text-secondary);">
+            <li style="display: flex; align-items: center; gap: 10px;">
+              <span style="color: var(--cyan-400);">✓</span> Zero advertising trackers
+            </li>
+            <li style="display: flex; align-items: center; gap: 10px;">
+              <span style="color: var(--cyan-400);">✓</span> AI synthesis in 10 Indian & global languages
+            </li>
+            <li style="display: flex; align-items: center; gap: 10px;">
+              <span style="color: var(--cyan-400);">✓</span> AES-256 client-side encrypted Digital Locker
+            </li>
+            <li style="display: flex; align-items: center; gap: 10px;">
+              <span style="color: var(--cyan-400);">✓</span> Instant data portability & JSON export
+            </li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 18px;">
+          <div style="font-weight: 600; font-size: 0.88rem; margin-bottom: 4px; color: var(--cyan-300);">
+            Hackathon 2026 Ready
+          </div>
+          <p style="font-size: 0.78rem; color: var(--text-muted);">
+            Fully functional client prototype with modular REST API readiness.
+          </p>
+        </div>
+      </div>
+
+      <!-- Signup Form Column -->
+      <div class="auth-form-column">
+        <h1 class="auth-title">Create Your Vault</h1>
+        <p class="auth-subtitle">Initialize your personal encrypted digital environment.</p>
+
+        <form id="signup-form" novalidate>
+          
+          <!-- Full Name -->
+          <div class="form-group" id="group-signup-name">
+            <label for="signup-name" class="form-label">
+              Full Name <span class="required" aria-hidden="true">*</span>
+            </label>
+            <div class="input-icon-wrapper">
+              <span class="input-icon" aria-hidden="true">👤</span>
+              <input 
+                type="text" 
+                id="signup-name" 
+                name="fullName" 
+                class="form-control" 
+                placeholder="Aarav Sharma" 
+                required 
+                autocomplete="name"
+              >
+            </div>
+            <div class="form-error" role="alert"></div>
+          </div>
+
+          <!-- Email & Phone Grid -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group" id="group-signup-email">
+              <label for="signup-email" class="form-label">
+                Email Address <span class="required" aria-hidden="true">*</span>
+              </label>
+              <div class="input-icon-wrapper">
+                <span class="input-icon" aria-hidden="true">✉️</span>
+                <input 
+                  type="email" 
+                  id="signup-email" 
+                  name="email" 
+                  class="form-control" 
+                  placeholder="name@example.com" 
+                  required 
+                  autocomplete="email"
+                >
+              </div>
+              <div class="form-error" role="alert"></div>
+            </div>
+
+            <div class="form-group" id="group-signup-phone">
+              <label for="signup-phone" class="form-label">
+                Phone Number <span class="required" aria-hidden="true">*</span>
+              </label>
+              <div class="input-icon-wrapper">
+                <span class="input-icon" aria-hidden="true">📱</span>
+                <input 
+                  type="tel" 
+                  id="signup-phone" 
+                  name="phone" 
+                  class="form-control" 
+                  placeholder="+91 98765 43210" 
+                  required 
+                  autocomplete="tel"
+                >
+              </div>
+              <div class="form-error" role="alert"></div>
+            </div>
+          </div>
+
+          <!-- Preferred Language Selector -->
+          <div class="form-group" id="group-signup-language">
+            <label for="signup-language" class="form-label">
+              Preferred Language for AI Notes & Interface <span class="required" aria-hidden="true">*</span>
+            </label>
+            <div class="input-icon-wrapper">
+              <span class="input-icon" aria-hidden="true">🌐</span>
+              <select id="signup-language" name="preferredLanguage" class="form-select form-control" required>
+                <!-- Populated dynamically by auth.js -->
+              </select>
+            </div>
+            <div class="form-error" role="alert"></div>
+          </div>
+
+          <!-- Password & Confirm Password Grid -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group" id="group-signup-password">
+              <label for="signup-password" class="form-label">
+                Password <span class="required" aria-hidden="true">*</span>
+              </label>
+              <div class="input-icon-wrapper">
+                <span class="input-icon" aria-hidden="true">🔑</span>
+                <input 
+                  type="password" 
+                  id="signup-password" 
+                  name="password" 
+                  class="form-control" 
+                  placeholder="At least 8 chars" 
+                  required 
+                  autocomplete="new-password"
+                >
+                <button type="button" class="input-toggle-password" aria-label="Toggle password visibility">👁️</button>
+              </div>
+              <div class="password-strength-container">
+                <div id="password-strength-indicator" class="password-strength-bar"></div>
+              </div>
+              <div class="form-error" role="alert"></div>
+            </div>
+
+            <div class="form-group" id="group-signup-confirm-password">
+              <label for="signup-confirm-password" class="form-label">
+                Confirm Password <span class="required" aria-hidden="true">*</span>
+              </label>
+              <div class="input-icon-wrapper">
+                <span class="input-icon" aria-hidden="true">🔒</span>
+                <input 
+                  type="password" 
+                  id="signup-confirm-password" 
+                  name="confirmPassword" 
+                  class="form-control" 
+                  placeholder="Repeat password" 
+                  required 
+                  autocomplete="new-password"
+                >
+              </div>
+              <div class="form-error" role="alert"></div>
+            </div>
+          </div>
+
+          <!-- Terms acceptance -->
+          <div class="form-group">
+            <label class="form-checkbox">
+              <input type="checkbox" id="accept-terms" required checked>
+              <span>I agree to private cryptographic data handling and zero-knowledge vault terms.</span>
+            </label>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" id="signup-submit-btn" class="btn btn-primary" style="width: 100%; padding: 13px;">
+            Create My VAYLUME Space →
+          </button>
+
+          <!-- Alternative Link -->
+          <div style="text-align: center; margin-top: 24px; font-size: 0.9rem; color: var(--text-secondary);">
+            Already possess an active space? 
+            <a href="login.html" style="color: var(--cyan-400); font-weight: 600;">Log In</a>
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>

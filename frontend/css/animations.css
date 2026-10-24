@@ -1,0 +1,640 @@
+/* ==========================================================================
+   VAYLUME - Premium Cyber-Luxury Animation Engine
+   Style: Smooth, Fast, Elegant, Minimal
+   Key Properties: transform, opacity, transition, @keyframes
+   Accessibility: prefers-reduced-motion fully supported
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Hero Fade-In
+   -------------------------------------------------------------------------- */
+@keyframes heroFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hero-section {
+  animation: heroFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* --------------------------------------------------------------------------
+   2. Hero Text Slide-Up (Staggered Entrances)
+   -------------------------------------------------------------------------- */
+@keyframes heroTextSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-badge {
+  animation: heroTextSlideUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
+}
+
+.hero-title {
+  animation: heroTextSlideUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+
+.hero-tagline {
+  animation: heroTextSlideUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
+}
+
+.hero-desc {
+  animation: heroTextSlideUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
+}
+
+.hero-actions {
+  animation: heroTextSlideUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.45s both;
+}
+
+.hero-stats {
+  animation: heroTextSlideUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both;
+}
+
+.hero-mockup-frame {
+  animation: heroTextSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both,
+             floatSlow 5s ease-in-out 1.2s infinite;
+}
+
+/* --------------------------------------------------------------------------
+   3. Feature Cards Fade-Up
+   -------------------------------------------------------------------------- */
+@keyframes featureFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.feature-grid .feature-card {
+  animation: featureFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.feature-grid .feature-card:nth-child(1) { animation-delay: 0.1s; }
+.feature-grid .feature-card:nth-child(2) { animation-delay: 0.2s; }
+.feature-grid .feature-card:nth-child(3) { animation-delay: 0.3s; }
+.feature-grid .feature-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* --------------------------------------------------------------------------
+   4. Card Hover Lift & Glow
+   -------------------------------------------------------------------------- */
+.card,
+.stat-card,
+.feature-card,
+.step-card {
+  transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.26s ease;
+  will-change: transform, box-shadow;
+}
+
+.card:hover,
+.stat-card:hover,
+.feature-card:hover,
+.step-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 242, 254, 0.35);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55), 0 0 20px rgba(0, 242, 254, 0.12);
+}
+
+/* --------------------------------------------------------------------------
+   5. Button Hover Transition
+   -------------------------------------------------------------------------- */
+.btn {
+  position: relative;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s ease,
+              border-color 0.2s ease,
+              color 0.2s ease;
+  will-change: transform;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 6px 22px rgba(0, 242, 254, 0.45);
+}
+
+.btn-secondary:hover {
+  box-shadow: 0 6px 18px rgba(255, 255, 255, 0.09);
+}
+
+.btn-accent:hover {
+  box-shadow: 0 6px 22px rgba(168, 85, 247, 0.45);
+}
+
+.btn-danger:hover {
+  box-shadow: 0 6px 20px rgba(244, 63, 94, 0.35);
+}
+
+/* --------------------------------------------------------------------------
+   6. Button Click Feedback (Tactile Press Response)
+   -------------------------------------------------------------------------- */
+.btn:active {
+  transform: scale(0.97) translateY(0);
+  transition-duration: 0.08s;
+}
+
+.btn-icon:active {
+  transform: scale(0.92);
+  transition-duration: 0.08s;
+}
+
+.filter-chip:active {
+  transform: scale(0.95);
+  transition-duration: 0.08s;
+}
+
+/* --------------------------------------------------------------------------
+   7. Navigation Active & Hover Animations
+   -------------------------------------------------------------------------- */
+/* Public Header Links */
+.nav-link {
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--gradient-brand);
+  border-radius: 2px;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* App Sidebar Menu Active Transition */
+.sidebar-link {
+  position: relative;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 22px;
+  border-radius: 0 4px 4px 0;
+  background: var(--cyan-400);
+  box-shadow: 0 0 10px var(--cyan-400);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-link.active::before {
+  transform: translateY(-50%) scaleY(1);
+}
+
+/* --------------------------------------------------------------------------
+   8. Section Reveal Animation (Scroll Triggered)
+   -------------------------------------------------------------------------- */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-on-scroll.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --------------------------------------------------------------------------
+   9. Memory Card Hover Effect
+   -------------------------------------------------------------------------- */
+.memory-card {
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.28s ease;
+  will-change: transform, box-shadow;
+}
+
+.memory-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(0, 242, 254, 0.42);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 24px rgba(0, 242, 254, 0.2);
+}
+
+.memory-badge-overlay {
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.memory-card:hover .memory-badge-overlay {
+  transform: translateY(-2px);
+}
+
+/* --------------------------------------------------------------------------
+   10. Image Zoom on Hover
+   -------------------------------------------------------------------------- */
+.memory-image-container {
+  overflow: hidden;
+  position: relative;
+}
+
+.memory-img {
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.memory-card:hover .memory-img {
+  transform: scale(1.07);
+}
+
+/* --------------------------------------------------------------------------
+   11. AI Generation Loading Animation (Futuristic Orbital Pulse)
+   -------------------------------------------------------------------------- */
+@keyframes aiOrbPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(0, 242, 254, 0.45);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 35px rgba(0, 242, 254, 0.75);
+  }
+}
+
+@keyframes aiRingRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes aiDotsFlow {
+  0%, 20% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+  80%, 100% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+}
+
+.ai-radar-container {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-radar-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 242, 254, 0.4);
+  animation: aiRingRotate 3.5s linear infinite;
+  will-change: transform;
+}
+
+.ai-radar-ring::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: calc(50% - 4px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cyan-400);
+  box-shadow: 0 0 10px var(--cyan-400);
+}
+
+.ai-radar-core {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--gradient-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #07090e;
+  font-size: 1.4rem;
+  box-shadow: 0 0 20px rgba(0, 242, 254, 0.6);
+  animation: aiOrbPulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  will-change: transform, box-shadow;
+}
+
+/* --------------------------------------------------------------------------
+   12. Document Upload Loading Animation (Scanning Beam & Progress)
+   -------------------------------------------------------------------------- */
+@keyframes scanBeamSweep {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  20%, 80% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+.upload-dropzone {
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-dropzone.uploading::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--cyan-400);
+  box-shadow: 0 0 12px var(--cyan-400), 0 0 20px var(--cyan-400);
+  animation: scanBeamSweep 1.8s ease-in-out infinite;
+  will-change: top, opacity;
+}
+
+/* --------------------------------------------------------------------------
+   13. Toast Notification Animation
+   -------------------------------------------------------------------------- */
+@keyframes toastEntrance {
+  from {
+    opacity: 0;
+    transform: translateX(40px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes toastExit {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(35px) scale(0.92);
+  }
+}
+
+.toast {
+  animation: toastEntrance 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.toast.toast-hiding {
+  animation: toastExit 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+/* --------------------------------------------------------------------------
+   14. Modal Open/Close Animation
+   -------------------------------------------------------------------------- */
+.modal-backdrop {
+  opacity: 0;
+  transition: opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.modal-backdrop.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-backdrop .modal-dialog {
+  transform: scale(0.94) translateY(14px);
+  opacity: 0;
+  transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+}
+
+.modal-backdrop.show .modal-dialog {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+.modal-backdrop.closing {
+  opacity: 0;
+}
+
+.modal-backdrop.closing .modal-dialog {
+  transform: scale(0.94) translateY(14px);
+  opacity: 0;
+}
+
+/* --------------------------------------------------------------------------
+   15. Skeleton Loading Animation (Smooth Continuous Shimmer)
+   -------------------------------------------------------------------------- */
+@keyframes skeletonShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 20%,
+    rgba(255, 255, 255, 0.07) 50%,
+    rgba(255, 255, 255, 0.02) 80%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+  will-change: background-position;
+}
+
+.skeleton-text {
+  height: 14px;
+  margin-bottom: 10px;
+}
+
+.skeleton-title {
+  height: 22px;
+  width: 60%;
+  margin-bottom: 14px;
+}
+
+.skeleton-card {
+  height: 180px;
+}
+
+/* --------------------------------------------------------------------------
+   16. Smooth Logout Transition (Full-Screen Vault Lock Overlay)
+   -------------------------------------------------------------------------- */
+@keyframes logoutFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(14px);
+  }
+}
+
+@keyframes lockIconPulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.logout-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(5, 7, 12, 0.94);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: logoutFadeIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  text-align: center;
+}
+
+.logout-lock-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(0, 242, 254, 0.1);
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  margin-bottom: 18px;
+  animation: lockIconPulse 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-shadow: 0 0 25px rgba(0, 242, 254, 0.35);
+}
+
+.logout-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.logout-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   General Utility Transitions & Animations
+   -------------------------------------------------------------------------- */
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+    border-color: rgba(0, 242, 254, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(0, 242, 254, 0.45);
+    border-color: rgba(0, 242, 254, 0.7);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-fadeIn {
+  animation: heroFadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-float {
+  animation: floatSlow 4.5s ease-in-out infinite;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+/* --------------------------------------------------------------------------
+   Accessibility: prefers-reduced-motion
+   Respects user operating system accessibility settings
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reveal-on-scroll {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .hero-mockup-frame,
+  .ai-radar-ring,
+  .ai-radar-core {
+    animation: none !important;
+  }
+}
