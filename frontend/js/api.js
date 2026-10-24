@@ -116,9 +116,15 @@ function initializeMockStore() {
 }
 initializeMockStore();
 
+const VAULT_TOKEN_KEY = 'vaylume_vault_token';
+
 function getAuthHeader() {
   const token = localStorage.getItem(TOKEN_KEY);
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
+  const vaultToken = sessionStorage.getItem(VAULT_TOKEN_KEY);
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (vaultToken) headers['X-Vault-Token'] = vaultToken;
+  return headers;
 }
 
 /** Detect whether we are in offline/mock mode (no real token stored). */
@@ -270,6 +276,110 @@ const API = {
     }
   },
 
+  // ── Two-Step Lock & Vault Security ──────────────────────────────────────
+
+  async getVaultStatus() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/vault/status`, {
+        headers: { ...getAuthHeader() }
+      });
+      if (response.ok) return await response.json();
+      throw new Error('Could not get vault status');
+    } catch (err) {
+      const isSetup = Boolean(localStorage.getItem('vylm_mock_vault_setup'));
+      return {
+        is_setup: isSetup,
+        has_webauthn: Boolean(localStorage.getItem('vylm_mock_vault_webauthn')),
+        has_fallback_pin: true
+      };
+    }
+  },
+
+  async setupVault(setupData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/vault/setup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify(setupData)
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.vault_token) {
+          sessionStorage.setItem(VAULT_TOKEN_KEY, data.vault_token);
+        }
+        return data;
+      }
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || (err.detail && err.detail.message) || 'Vault setup failed');
+    } catch (err) {
+      console.warn('[VAYLUME] Using local mock vault setup:', err.message);
+      localStorage.setItem('vylm_mock_vault_setup', 'true');
+      localStorage.setItem('vylm_mock_pattern_hash', setupData.pattern_hash);
+      if (setupData.has_webauthn) localStorage.setItem('vylm_mock_vault_webauthn', 'true');
+      if (setupData.fallback_pin_hash) localStorage.setItem('vylm_mock_fallback_pin', setupData.fallback_pin_hash);
+      const mockToken = 'vylm_mock_vault_token_' + Date.now();
+      sessionStorage.setItem(VAULT_TOKEN_KEY, mockToken);
+      return { vault_token: mockToken, expires_in: 3600, message: 'Setup complete' };
+    }
+  },
+
+  async verifyBiometric(bioData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/vault/verify-biometric`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify(bioData)
+      });
+      if (response.ok) return await response.json();
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || (err.detail && err.detail.message) || 'Biometric verification failed');
+    } catch (err) {
+      if (bioData.fallback_pin_hash) {
+        const storedPin = localStorage.getItem('vylm_mock_fallback_pin');
+        if (storedPin && storedPin !== bioData.fallback_pin_hash) {
+          throw new Error('Incorrect Fallback PIN');
+        }
+      }
+      return { biometric_token: 'vylm_mock_bio_token_' + Date.now(), message: 'Biometric verified' };
+    }
+  },
+
+  async verifyPattern(patternData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/vault/verify-pattern`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify(patternData)
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.vault_token) {
+          sessionStorage.setItem(VAULT_TOKEN_KEY, data.vault_token);
+        }
+        return data;
+      }
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || (err.detail && err.detail.message) || 'Pattern verification failed');
+    } catch (err) {
+      const storedPattern = localStorage.getItem('vylm_mock_pattern_hash');
+      if (storedPattern && storedPattern !== patternData.pattern_hash) {
+        throw new Error('Incorrect Pattern. Please try again.');
+      }
+      const mockToken = 'vylm_mock_vault_token_' + Date.now();
+      sessionStorage.setItem(VAULT_TOKEN_KEY, mockToken);
+      return { vault_token: mockToken, expires_in: 3600, message: 'Unlocked' };
+    }
+  },
+
+  lockVault() {
+    sessionStorage.removeItem(VAULT_TOKEN_KEY);
+    fetch(`${API_BASE_URL}/vault/lock`, { method: 'POST', headers: { ...getAuthHeader() } }).catch(() => {});
+  },
+
+  isVaultUnlocked() {
+    return Boolean(sessionStorage.getItem(VAULT_TOKEN_KEY));
+  },
+
   // ── Memories ─────────────────────────────────────────────────────────────
 
   async getMemories(filters = {}) {
@@ -315,29 +425,34 @@ const API = {
       formData.append('title', memoryData.title);
       if (memoryData.description) formData.append('description', memoryData.description);
       if (memoryData.date) formData.append('memory_date', memoryData.date);
-      // If a real File object is provided (from input[type=file])
+      if (memoryData.category) formData.append('category', memoryData.category);
+      if (memoryData.tags) {
+        formData.append('tags', Array.isArray(memoryData.tags) ? JSON.stringify(memoryData.tags) : memoryData.tags);
+      }
       if (memoryData.photoFile instanceof File) {
         formData.append('photo', memoryData.photoFile);
       }
 
       const response = await fetch(`${API_BASE_URL}/memories`, {
         method: 'POST',
-        headers: { ...getAuthHeader() }, // Do NOT set Content-Type for FormData
+        headers: { ...getAuthHeader() },
         body: formData
       });
       if (response.ok) {
         return normaliseMemory(await response.json());
       }
-      throw new Error('Could not create memory on backend');
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || (err.detail && err.detail.message) || 'Could not create memory on backend');
     } catch (err) {
+      console.warn('[VAYLUME] Using local mock memory:', err.message);
       const memories = JSON.parse(localStorage.getItem(MEMORIES_STORE_KEY) || '[]');
       const newMemory = {
         id: 'mem_' + Date.now(),
         title: memoryData.title,
         description: memoryData.description,
         date: memoryData.date || new Date().toISOString().split('T')[0],
-        category: memoryData.category || 'General',
-        tags: memoryData.tags || [],
+        category: memoryData.category || 'Personal',
+        tags: Array.isArray(memoryData.tags) ? memoryData.tags : (memoryData.tags ? memoryData.tags.split(',').map(s=>s.trim()) : []),
         imageUrl: memoryData.imageUrl || 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
         createdAt: new Date().toISOString(),
         isFavorite: false
@@ -345,6 +460,29 @@ const API = {
       memories.unshift(newMemory);
       localStorage.setItem(MEMORIES_STORE_KEY, JSON.stringify(memories));
       return newMemory;
+    }
+  },
+
+  async createMemoriesBatch(formData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/memories/batch`, {
+        method: 'POST',
+        headers: { ...getAuthHeader() },
+        body: formData
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          memories: (data.memories || []).map(normaliseMemory),
+          total_uploaded: data.total_uploaded,
+          errors: data.errors || []
+        };
+      }
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || (err.detail && err.detail.message) || 'Batch upload failed');
+    } catch (err) {
+      console.warn('[VAYLUME] Batch upload backend unavailable:', err.message);
+      throw err;
     }
   },
 

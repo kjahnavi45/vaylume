@@ -90,6 +90,48 @@ class MessageResponse(BaseModel):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Vault Security (Two-Step Lock: Biometric/Passkey + 3x3 Pattern Lock)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class VaultStatusResponse(BaseModel):
+    is_setup: bool
+    has_webauthn: bool = False
+    has_fallback_pin: bool = False
+
+
+class VaultSetupRequest(BaseModel):
+    pattern_hash: str = Field(..., min_length=16, max_length=128, description="SHA-256 hash of pattern sequence")
+    webauthn_credential_id: Optional[str] = None
+    webauthn_public_key: Optional[str] = None
+    has_webauthn: bool = False
+    fallback_pin_hash: Optional[str] = None
+
+
+class VaultVerifyBiometricRequest(BaseModel):
+    credential_id: Optional[str] = None
+    authenticator_data: Optional[str] = None
+    client_data_json: Optional[str] = None
+    signature: Optional[str] = None
+    fallback_pin_hash: Optional[str] = None
+
+
+class VaultVerifyBiometricResponse(BaseModel):
+    biometric_token: str
+    message: str = "Biometric passkey verified"
+
+
+class VaultVerifyPatternRequest(BaseModel):
+    pattern_hash: str = Field(..., min_length=16, max_length=128)
+    biometric_token: Optional[str] = None
+
+
+class VaultTokenResponse(BaseModel):
+    vault_token: str
+    expires_in: int = 3600
+    message: str = "Vault unlocked successfully"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Memories
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -97,12 +139,16 @@ class MemoryCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=2000)
     memory_date: Optional[date] = None
+    category: Optional[str] = Field("Personal", max_length=50)
+    tags: Optional[List[str]] = Field(default_factory=list)
 
 
 class MemoryUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=2000)
     memory_date: Optional[date] = None
+    category: Optional[str] = Field(None, max_length=50)
+    tags: Optional[List[str]] = None
 
 
 class MemoryResponse(BaseModel):
@@ -111,6 +157,8 @@ class MemoryResponse(BaseModel):
     title: str
     description: Optional[str] = None
     memory_date: Optional[date] = None
+    category: Optional[str] = "Personal"
+    tags: Optional[List[str]] = Field(default_factory=list)
     photo_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
@@ -119,6 +167,12 @@ class MemoryResponse(BaseModel):
 class MemoryListResponse(BaseModel):
     memories: List[MemoryResponse]
     total: int
+
+
+class BatchMemoryResponse(BaseModel):
+    memories: List[MemoryResponse]
+    total_uploaded: int
+    errors: List[str] = Field(default_factory=list)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

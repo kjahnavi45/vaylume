@@ -135,11 +135,14 @@ def forgot_password(payload: ForgotPasswordRequest) -> MessageResponse:
 def get_current_user(jwt: str) -> UserResponse:
     """Verify JWT and return the authenticated user."""
     # Allow mock / test JWT tokens for development and tests
-    if jwt.startswith("vylm_jwt_") or jwt == "test-jwt-token" or jwt == "demo-jwt-token":
+    if jwt.startswith("vylm_jwt_") or jwt in ("test-jwt-token", "demo-jwt-token"):
+        import uuid
+        user_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, jwt))
+        email_prefix = jwt.replace("vylm_jwt_", "")
         return UserResponse(
-            id="00000000-0000-0000-0000-000000000001",
-            email="demo@vaylume.app",
-            full_name="Demo User",
+            id=user_uuid,
+            email=f"{email_prefix}@vaylume.app",
+            full_name=f"User {email_prefix.title()}",
             created_at=None,
         )
 

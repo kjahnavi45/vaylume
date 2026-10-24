@@ -6,14 +6,17 @@ Security model:
   - Buckets must be configured as PRIVATE in Supabase (no public URLs).
   - Download access is granted via short-lived signed URLs (1 hour).
   - File type and size are validated BEFORE upload.
+  - In-memory fallback provided when running offline or in tests.
 """
 
 from __future__ import annotations
 
+import base64
+import io
 import logging
 import mimetypes
 import uuid
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 from fastapi import HTTPException, UploadFile, status
 from supabase import Client
@@ -23,8 +26,7 @@ from config.settings import get_settings
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-# ── Allowed MIME types ────────────────────────────────────────────────────────
-
+# Allowed MIME types
 ALLOWED_IMAGE_TYPES = {
     "image/jpeg",
     "image/png",
@@ -53,10 +55,13 @@ ALLOWED_LOCKER_TYPES = {
 
 SIGNED_URL_EXPIRY_SECONDS = 3600  # 1 hour
 
+# Thread-safe in-memory file cache for mock/offline mode
+_MOCK_STORAGE: Dict[str, Tuple[bytes, str]] = {}
+
 
 class StorageService:
-    def __init__(self, client: Client):
-        self._storage = client.storage
+    def __init__(self, client: Optional[Client]):
+        self._storage = client.storage if client is not None else None
 
     # ── Internal helpers ──────────────────────────────────────────────────────
 
@@ -72,7 +77,7 @@ class StorageService:
         """
         # Detect MIME from content_type header; fall back to extension sniffing
         mime = file.content_type or ""
-        if not mime:
+        if not mime or mime == "application/octet-stream":
             guessed, _ = mimetypes.guess_type(file.filename or "")
             mime = guessed or "application/octet-stream"
 
@@ -81,7 +86,7 @@ class StorageService:
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 detail={
                     "code": "INVALID_FILE_TYPE",
-                    "message": f"File type '{mime}' is not allowed.",
+                    "message": f"File type '{mime}' is not allowed. Supported formats: JPG, PNG, WebP.",
                 },
             )
 
@@ -100,7 +105,6 @@ class StorageService:
             )
 
         # Reset cursor so callers can re-read the content
-        import io
         file.file = io.BytesIO(content)
         return mime, size
 
@@ -130,18 +134,22 @@ class StorageService:
         path, unique_name = self._storage_path(user_id, file.filename or "photo.jpg")
         content = file.file.read()
 
-        try:
-            self._storage.from_(settings.STORAGE_BUCKET_MEMORIES).upload(
-                path=path,
-                file=content,
-                file_options={"content-type": mime, "upsert": "false"},
-            )
-        except Exception as exc:
-            logger.error("Memory photo upload failed: %s", exc, exc_info=True)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail={"code": "UPLOAD_FAILED", "message": "Photo upload failed"},
-            )
+        if self._storage is not None:
+            try:
+                self._storage.from_(settings.STORAGE_BUCKET_MEMORIES).upload(
+                    path=path,
+                    file=content,
+                    file_options={"content-type": mime, "upsert": "false"},
+                )
+            except Exception as exc:
+                logger.error("Memory photo upload failed: %s", exc, exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail={"code": "UPLOAD_FAILED", "message": "Photo upload failed"},
+                )
+        else:
+            # Fallback mock storage
+            _MOCK_STORAGE[f"{settings.STORAGE_BUCKET_MEMORIES}/{path}"] = (content, mime)
 
         return path, unique_name, size
 
@@ -160,38 +168,55 @@ class StorageService:
         path, unique_name = self._storage_path(user_id, file.filename or "document")
         content = file.file.read()
 
-        try:
-            self._storage.from_(settings.STORAGE_BUCKET_LOCKER).upload(
-                path=path,
-                file=content,
-                file_options={"content-type": mime, "upsert": "false"},
-            )
-        except Exception as exc:
-            logger.error("Locker file upload failed: %s", exc, exc_info=True)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail={"code": "UPLOAD_FAILED", "message": "File upload failed"},
-            )
+        if self._storage is not None:
+            try:
+                self._storage.from_(settings.STORAGE_BUCKET_LOCKER).upload(
+                    path=path,
+                    file=content,
+                    file_options={"content-type": mime, "upsert": "false"},
+                )
+            except Exception as exc:
+                logger.error("Locker file upload failed: %s", exc, exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail={"code": "UPLOAD_FAILED", "message": "File upload failed"},
+                )
+        else:
+            _MOCK_STORAGE[f"{settings.STORAGE_BUCKET_LOCKER}/{path}"] = (content, mime)
 
         return path, unique_name, mime, size
 
     def get_signed_url(self, bucket: str, path: str) -> Optional[str]:
         """Generate a short-lived signed URL for private file access."""
-        try:
-            resp = self._storage.from_(bucket).create_signed_url(
-                path=path,
-                expires_in=SIGNED_URL_EXPIRY_SECONDS,
-            )
-            return resp.get("signedURL") or resp.get("signedUrl")
-        except Exception as exc:
-            logger.warning("Could not generate signed URL for %s/%s: %s", bucket, path, exc)
-            return None
+        if self._storage is not None:
+            try:
+                resp = self._storage.from_(bucket).create_signed_url(
+                    path=path,
+                    expires_in=SIGNED_URL_EXPIRY_SECONDS,
+                )
+                return resp.get("signedURL") or resp.get("signedUrl")
+            except Exception as exc:
+                logger.warning("Could not generate signed URL for %s/%s: %s", bucket, path, exc)
+                return None
+        else:
+            # Mock mode: return data URL so photos render properly in demo
+            key = f"{bucket}/{path}"
+            if key in _MOCK_STORAGE:
+                content, mime = _MOCK_STORAGE[key]
+                b64 = base64.b64encode(content).decode("utf-8")
+                return f"data:{mime};base64,{b64}"
+            return f"https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80"
 
     def delete_file(self, bucket: str, path: str) -> bool:
         """Delete a file from a storage bucket."""
-        try:
-            self._storage.from_(bucket).remove([path])
+        if self._storage is not None:
+            try:
+                self._storage.from_(bucket).remove([path])
+                return True
+            except Exception as exc:
+                logger.error("Storage delete failed for %s/%s: %s", bucket, path, exc)
+                return False
+        else:
+            key = f"{bucket}/{path}"
+            _MOCK_STORAGE.pop(key, None)
             return True
-        except Exception as exc:
-            logger.error("Storage delete failed for %s/%s: %s", bucket, path, exc)
-            return False

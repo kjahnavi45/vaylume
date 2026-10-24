@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from config.settings import get_settings
-from routes import auth, locker, memories, notes
+from routes import auth, locker, memories, notes, vault
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -98,6 +98,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(auth.router,     prefix="/api/v1")
+app.include_router(vault.router,    prefix="/api/v1")
 app.include_router(memories.router, prefix="/api/v1")
 app.include_router(notes.router,    prefix="/api/v1")
 app.include_router(locker.router,   prefix="/api/v1")
