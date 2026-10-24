@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: vaylume-api
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: cd backend && pip install -r requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ALLOWED_ORIGINS
+        value: https://vaylume-web.vercel.app,https://frontend-ten-amber-12.vercel.app,https://frontend-shaafiyas-projects.vercel.app,http://localhost:5500,http://localhost:3000
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: STORAGE_BUCKET_MEMORIES
+        value: memories
+      - key: STORAGE_BUCKET_LOCKER
+        value: locker

@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     # ── CORS ──────────────────────────────────────────────────────────────────
     # Comma-separated list of allowed origins, e.g. http://localhost:5500,https://vaylume.app
-    ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5500,http://127.0.0.1:5500,http://localhost:8000,http://127.0.0.1:8000,http://localhost:8080,http://127.0.0.1:8080"
+    ALLOWED_ORIGINS: str = "https://vaylume-web.vercel.app,https://frontend-ten-amber-12.vercel.app,https://frontend-shaafiyas-projects.vercel.app,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5500,http://127.0.0.1:5500,http://localhost:8000,http://127.0.0.1:8000,http://localhost:8080,http://127.0.0.1:8080"
 
     # ── File upload limits ────────────────────────────────────────────────────
     MAX_MEMORY_IMAGE_SIZE_MB: int = 10

@@ -21,10 +21,23 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Set window.API_BASE_URL before loading this script to override.
- * Default is the local backend running on port 8000.
+ * Backend API Base URL configuration:
+ * 1. Explicit window override if specified: window.API_BASE_URL
+ * 2. Localhost if running locally (http://localhost:8000/api/v1)
+ * 3. Deployed Render backend URL when running on production / public URL
  */
-const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8000/api/v1';
+const DEPLOYED_BACKEND_URL = 'https://vaylume-api.onrender.com/api/v1';
+
+const isLocalhost = Boolean(
+  typeof window !== 'undefined' && (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.protocol === 'file:'
+  )
+);
+
+const API_BASE_URL = (typeof window !== 'undefined' && window.API_BASE_URL) ||
+  (isLocalhost ? 'http://localhost:8000/api/v1' : DEPLOYED_BACKEND_URL);
 
 // Storage keys
 const TOKEN_KEY = 'vaylume_auth_token';
