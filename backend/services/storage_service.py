@@ -75,7 +75,6 @@ class StorageService:
         Validate MIME type and file size.
         Returns (mime_type, size_bytes) on success or raises HTTPException.
         """
-        # Detect MIME from content_type header; fall back to extension sniffing
         mime = file.content_type or ""
         if not mime or mime == "application/octet-stream":
             guessed, _ = mimetypes.guess_type(file.filename or "")
@@ -90,7 +89,6 @@ class StorageService:
                 },
             )
 
-        # Read size without storing in memory beyond the limit
         max_bytes = max_size_mb * 1024 * 1024
         content = file.file.read(max_bytes + 1)
         size = len(content)
@@ -104,7 +102,6 @@ class StorageService:
                 },
             )
 
-        # Reset cursor so callers can re-read the content
         file.file = io.BytesIO(content)
         return mime, size
 
@@ -122,10 +119,7 @@ class StorageService:
     def upload_memory_photo(
         self, user_id: str, file: UploadFile
     ) -> Tuple[str, str, int]:
-        """
-        Upload a memory photo.
-        Returns (storage_path, unique_filename, size_bytes).
-        """
+        """Upload a memory photo."""
         mime, size = self._validate_file(
             file,
             ALLOWED_IMAGE_TYPES,
@@ -148,18 +142,45 @@ class StorageService:
                     detail={"code": "UPLOAD_FAILED", "message": "Photo upload failed"},
                 )
         else:
-            # Fallback mock storage
             _MOCK_STORAGE[f"{settings.STORAGE_BUCKET_MEMORIES}/{path}"] = (content, mime)
+
+        return path, unique_name, size
+
+    def upload_wallpaper(
+        self, user_id: str, file: UploadFile
+    ) -> Tuple[str, str, int]:
+        """Upload a custom wallpaper photo."""
+        mime, size = self._validate_file(
+            file,
+            ALLOWED_IMAGE_TYPES,
+            settings.MAX_MEMORY_IMAGE_SIZE_MB,
+        )
+        path, unique_name = self._storage_path(user_id, file.filename or "wallpaper.jpg")
+        content = file.file.read()
+
+        bucket = getattr(settings, "STORAGE_BUCKET_WALLPAPERS", "wallpapers")
+        if self._storage is not None:
+            try:
+                self._storage.from_(bucket).upload(
+                    path=path,
+                    file=content,
+                    file_options={"content-type": mime, "upsert": "false"},
+                )
+            except Exception as exc:
+                logger.error("Wallpaper upload failed: %s", exc, exc_info=True)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail={"code": "UPLOAD_FAILED", "message": "Wallpaper upload failed"},
+                )
+        else:
+            _MOCK_STORAGE[f"{bucket}/{path}"] = (content, mime)
 
         return path, unique_name, size
 
     def upload_locker_file(
         self, user_id: str, file: UploadFile
     ) -> Tuple[str, str, str, int]:
-        """
-        Upload a locker document.
-        Returns (storage_path, unique_filename, mime_type, size_bytes).
-        """
+        """Upload a locker document."""
         mime, size = self._validate_file(
             file,
             ALLOWED_LOCKER_TYPES,
@@ -199,7 +220,6 @@ class StorageService:
                 logger.warning("Could not generate signed URL for %s/%s: %s", bucket, path, exc)
                 return None
         else:
-            # Mock mode: return data URL so photos render properly in demo
             key = f"{bucket}/{path}"
             if key in _MOCK_STORAGE:
                 content, mime = _MOCK_STORAGE[key]

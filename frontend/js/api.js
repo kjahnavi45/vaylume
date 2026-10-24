@@ -116,6 +116,75 @@ function initializeMockStore() {
 }
 initializeMockStore();
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Offline Outbox Queue & Background Synchronization
+// ─────────────────────────────────────────────────────────────────────────────
+const OUTBOX_KEY = 'vaylume_offline_outbox';
+
+function getOutbox() {
+  try {
+    return JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveOutbox(items) {
+  localStorage.setItem(OUTBOX_KEY, JSON.stringify(items));
+}
+
+function queueMutation(mutation) {
+  const outbox = getOutbox();
+  outbox.push({
+    ...mutation,
+    id: 'outbox_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+    queuedAt: new Date().toISOString()
+  });
+  saveOutbox(outbox);
+  if (typeof window.showToast === 'function') {
+    window.showToast('Action saved locally (offline mode). Syncs when online. ☁️', 'info');
+  }
+}
+
+async function processOfflineOutbox() {
+  if (!navigator.onLine) return;
+  const outbox = getOutbox();
+  if (!outbox.length) return;
+
+  console.log('[VAYLUME Outbox] Synchronizing ' + outbox.length + ' queued mutations...');
+  const remaining = [];
+
+  for (const item of outbox) {
+    try {
+      if (item.type === 'SAVE_NOTE') {
+        await API.saveNote(item.payload, false);
+      } else if (item.type === 'UPDATE_PREFERENCES') {
+        await API.updatePreferences(item.payload, false);
+      } else if (item.type === 'UPDATE_PROFILE') {
+        await API.updateProfile(item.payload, false);
+      }
+    } catch (e) {
+      console.warn('[VAYLUME Outbox] Sync deferred for item:', item, e);
+      remaining.push(item);
+    }
+  }
+
+  saveOutbox(remaining);
+  if (remaining.length === 0 && outbox.length > 0) {
+    if (typeof window.showToast === 'function') {
+      window.showToast('All offline changes synced with cloud sanctuary! ☁️', 'success');
+    }
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    console.log('[VAYLUME] Network reconnected. Processing outbox...');
+    processOfflineOutbox();
+  });
+}
+
+
 const VAULT_TOKEN_KEY = 'vaylume_vault_token';
 
 function getAuthHeader() {
@@ -262,18 +331,154 @@ const API = {
   },
 
   /**
-   * Update profile — M2: No backend endpoint yet, updates local store only.
+   * Update profile — Calls PUT /auth/me with offline fallback
    */
-  async updateProfile(data) {
+  async updateProfile(data, queueIfOffline = true) {
     try {
-      // When backend adds PATCH /auth/me, remove this try/throw
-      throw new Error('No backend profile update endpoint yet');
+      const payload = {};
+      if (data.fullName || data.full_name) payload.full_name = data.fullName || data.full_name;
+      if (data.phone !== undefined) payload.phone = data.phone;
+      if (data.bio !== undefined) payload.bio = data.bio;
+      if (data.preferredLanguage || data.preferred_language) {
+        payload.preferred_language = data.preferredLanguage || data.preferred_language;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify(payload)
+      });
+      if (response.ok) {
+        const profile = await response.json();
+        const normalised = {
+          ...profile,
+          fullName: profile.full_name || profile.fullName || profile.email,
+        };
+        localStorage.setItem(USER_KEY, JSON.stringify(normalised));
+        return normalised;
+      }
+      throw new Error('Profile update failed on server');
     } catch (err) {
+      console.warn('[VAYLUME] Profile update offline fallback:', err.message);
       const current = JSON.parse(localStorage.getItem(USER_KEY) || JSON.stringify(INITIAL_USER));
       const updated = { ...current, ...data };
       localStorage.setItem(USER_KEY, JSON.stringify(updated));
+      if (queueIfOffline) {
+        queueMutation({ type: 'UPDATE_PROFILE', payload: data });
+      }
       return updated;
     }
+  },
+
+  // ── Preferences & Personalization ───────────────────────────────────────
+
+  async getPreferences() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/preferences`, {
+        headers: { ...getAuthHeader() }
+      });
+      if (response.ok) {
+        const prefs = await response.json();
+        localStorage.setItem('vaylume_user_prefs', JSON.stringify(prefs));
+        return prefs;
+      }
+    } catch (e) {
+      console.warn('[VAYLUME] Using cached preferences:', e.message);
+    }
+    const stored = localStorage.getItem('vaylume_user_prefs');
+    return stored ? JSON.parse(stored) : {
+      theme: 'dark',
+      preset_theme: 'cyan',
+      custom_accent: '#00f2fe',
+      wallpaper_url: null,
+      wallpaper_blur: 0,
+      wallpaper_brightness: 100,
+      wallpaper_overlay_opacity: 40,
+      auto_lock_minutes: 15
+    };
+  },
+
+  async updatePreferences(prefs, queueIfOffline = true) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/preferences`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify(prefs)
+      });
+      if (response.ok) {
+        const updated = await response.json();
+        localStorage.setItem('vaylume_user_prefs', JSON.stringify(updated));
+        return updated;
+      }
+      throw new Error('Failed to save preferences to server');
+    } catch (e) {
+      console.warn('[VAYLUME] Preferences saved offline:', e.message);
+      const current = await this.getPreferences();
+      const updated = { ...current, ...prefs };
+      localStorage.setItem('vaylume_user_prefs', JSON.stringify(updated));
+      if (queueIfOffline) {
+        queueMutation({ type: 'UPDATE_PREFERENCES', payload: prefs });
+      }
+      return updated;
+    }
+  },
+
+  async uploadWallpaper(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${API_BASE_URL}/auth/preferences/wallpaper`, {
+      method: 'POST',
+      headers: { ...getAuthHeader() },
+      body: formData
+    });
+    if (response.ok) {
+      const data = await response.json();
+      const current = await this.getPreferences();
+      current.wallpaper_url = data.wallpaper_url;
+      localStorage.setItem('vaylume_user_prefs', JSON.stringify(current));
+      return data;
+    }
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || (err.detail && err.detail.message) || 'Wallpaper upload failed');
+  },
+
+  async exportData() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/export`, {
+        headers: { ...getAuthHeader() }
+      });
+      if (response.ok) return await response.json();
+    } catch (e) {
+      console.warn('[VAYLUME] Backend export unavailable, building client archive:', e.message);
+    }
+    const user = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+    const memories = JSON.parse(localStorage.getItem(MEMORIES_STORE_KEY) || '[]');
+    const documents = JSON.parse(localStorage.getItem(DOCUMENTS_STORE_KEY) || '[]');
+    const notes = JSON.parse(localStorage.getItem(NOTES_STORE_KEY) || '[]');
+    const prefs = JSON.parse(localStorage.getItem('vaylume_user_prefs') || '{}');
+    return {
+      user,
+      preferences: prefs,
+      memories,
+      notes,
+      documents,
+      export_timestamp: new Date().toISOString()
+    };
+  },
+
+  async deleteAccount(confirmationText) {
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({ confirmation: confirmationText })
+    });
+    if (response.ok) {
+      localStorage.clear();
+      sessionStorage.clear();
+      return await response.json();
+    }
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || (err.detail && err.detail.message) || 'Account deletion failed');
   },
 
   // ── Two-Step Lock & Vault Security ──────────────────────────────────────
@@ -646,8 +851,167 @@ const API = {
       localStorage.setItem(DOCUMENTS_STORE_KEY, JSON.stringify(docs));
       return { success: true, id };
     }
+  },
+  // ── Notes Cloud Persistence ──────────────────────────────────────────────
+
+  async saveNote(noteData, queueIfOffline = true) {
+    try {
+      const payload = {
+        topic: noteData.topic || noteData.title,
+        title: noteData.title || noteData.topic,
+        explanation: noteData.explanation || (noteData.sections && noteData.sections[0] ? noteData.sections[0].content : ''),
+        key_points: noteData.key_points || (noteData.sections && noteData.sections[1] ? noteData.sections[1].content.split('\n').filter(Boolean) : []),
+        examples: noteData.examples || (noteData.sections && noteData.sections[2] ? noteData.sections[2].content.split('\n').filter(Boolean) : []),
+        summary: noteData.summary || '',
+        language: noteData.language || 'English',
+        difficulty: noteData.difficulty || 'Intermediate',
+        format: noteData.style || noteData.format || 'Bullets',
+        tags: noteData.tags || []
+      };
+      const response = await fetch(`${API_BASE_URL}/notes/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+        body: JSON.stringify(payload)
+      });
+      if (response.ok) {
+        const saved = await response.json();
+        const localNotes = JSON.parse(localStorage.getItem(NOTES_STORE_KEY) || '[]');
+        localNotes.unshift(saved);
+        localStorage.setItem(NOTES_STORE_KEY, JSON.stringify(localNotes));
+        return saved;
+      }
+      throw new Error('Server note save failed');
+    } catch (err) {
+      console.warn('[VAYLUME] Note saved to local offline store:', err.message);
+      const localNotes = JSON.parse(localStorage.getItem(NOTES_STORE_KEY) || '[]');
+      const mockSaved = {
+        id: 'note_' + Date.now(),
+        ...noteData,
+        created_at: new Date().toISOString()
+      };
+      localNotes.unshift(mockSaved);
+      localStorage.setItem(NOTES_STORE_KEY, JSON.stringify(localNotes));
+      if (queueIfOffline) {
+        queueMutation({ type: 'SAVE_NOTE', payload: noteData });
+      }
+      return mockSaved;
+    }
+  },
+
+  async getSavedNotes() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/notes`, {
+        headers: { ...getAuthHeader() }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const notes = data.notes || [];
+        localStorage.setItem(NOTES_STORE_KEY, JSON.stringify(notes));
+        return notes;
+      }
+    } catch (err) {
+      console.warn('[VAYLUME] Using cached notes:', err.message);
+    }
+    return JSON.parse(localStorage.getItem(NOTES_STORE_KEY) || '[]');
+  },
+
+  async deleteSavedNote(noteId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/notes/${noteId}`, {
+        method: 'DELETE',
+        headers: { ...getAuthHeader() }
+      });
+      if (response.ok) {
+        let localNotes = JSON.parse(localStorage.getItem(NOTES_STORE_KEY) || '[]');
+        localNotes = localNotes.filter(n => n.id !== noteId);
+        localStorage.setItem(NOTES_STORE_KEY, JSON.stringify(localNotes));
+        return { success: true, id: noteId };
+      }
+    } catch (err) {
+      console.warn('[VAYLUME] Offline delete of note:', err.message);
+    }
+    let localNotes = JSON.parse(localStorage.getItem(NOTES_STORE_KEY) || '[]');
+    localNotes = localNotes.filter(n => n.id !== noteId);
+    localStorage.setItem(NOTES_STORE_KEY, JSON.stringify(localNotes));
+    return { success: true, id: noteId };
+  },
+
+  // ── Private 1-on-1 User-to-User Chat ─────────────────────────────────────
+
+  async getConversations() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/chat/conversations`, {
+        headers: { ...getAuthHeader() }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return data.conversations || [];
+      }
+    } catch (err) {
+      console.warn('[VAYLUME] Chat conversations offline:', err.message);
+    }
+    return JSON.parse(localStorage.getItem('vaylume_chat_conversations') || '[]');
+  },
+
+  async createConversation(participantIdentifier) {
+    const isEmail = String(participantIdentifier).includes('@');
+    const payload = isEmail ? { participant_email: participantIdentifier } : { participant_id: participantIdentifier };
+    const response = await fetch(`${API_BASE_URL}/chat/conversations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify(payload)
+    });
+    if (response.ok) return await response.json();
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || (err.detail && err.detail.message) || 'Failed to start conversation');
+  },
+
+  async getMessages(conversationId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/chat/conversations/${conversationId}/messages`, {
+        headers: { ...getAuthHeader() }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return data.messages || [];
+      }
+    } catch (err) {
+      console.warn('[VAYLUME] Chat messages offline:', err.message);
+    }
+    return [];
+  },
+
+  async sendMessage(conversationId, content) {
+    const response = await fetch(`${API_BASE_URL}/chat/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({ content })
+    });
+    if (response.ok) return await response.json();
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || (err.detail && err.detail.message) || 'Could not send message');
+  },
+
+  async deleteConversation(conversationId) {
+    const response = await fetch(`${API_BASE_URL}/chat/conversations/${conversationId}`, {
+      method: 'DELETE',
+      headers: { ...getAuthHeader() }
+    });
+    if (response.ok) return await response.json();
+    throw new Error('Failed to delete conversation');
+  },
+
+  async blockUser(targetUserId, reason = 'User requested block') {
+    const response = await fetch(`${API_BASE_URL}/chat/block`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({ target_user_id: targetUserId, reason })
+    });
+    if (response.ok) return await response.json();
+    throw new Error('Failed to block user');
   }
 };
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Field normalisers — bridge backend schema → frontend field names
@@ -781,3 +1145,5 @@ function formatBytes(bytes) {
 // Export to window
 window.API = API;
 window.isMockMode = isMockMode;
+
+window.processOfflineOutbox = processOfflineOutbox;

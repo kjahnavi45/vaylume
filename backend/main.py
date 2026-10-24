@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from config.settings import get_settings
-from routes import auth, locker, memories, notes, vault
+from routes import auth, chat, locker, memories, notes, vault
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -41,12 +41,14 @@ app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description=(
-        "## VAYLUME — Your Personal AI-Powered Life Organiser\n\n"
+        "## VAYLUME — Your Personal AI-Powered Life Organiser & Digital Vault\n\n"
         "**Features:**\n"
-        "- 🔐 **Authentication** — Supabase Auth (JWT)\n"
-        "- 📸 **Memories** — Store photos, titles, descriptions & dates\n"
-        "- 🤖 **AI Notes** — Gemini-powered notes in 10 Indian languages\n"
-        "- 🗄️ **Digital Locker** — Secure private document storage\n\n"
+        "- 🔐 **Authentication & Profile** — Supabase Auth, preferences & export\n"
+        "- 🛡️ **Two-Step Vault Lock** — Biometrics & 3x3 pattern lock security\n"
+        "- 📸 **Memories** — Encrypted photo memories & batch uploads\n"
+        "- 🤖 **AI Notes** — Gemini-powered multilingual notes & cloud persistence\n"
+        "- 🗄️ **Digital Locker** — Vault-protected document storage\n"
+        "- 💬 **Private Chat** — Secure 1-on-1 user-to-user messaging\n\n"
         "**Authentication:** Send `Authorization: Bearer <token>` on all protected endpoints."
     ),
     docs_url="/docs",
@@ -102,6 +104,7 @@ app.include_router(vault.router,    prefix="/api/v1")
 app.include_router(memories.router, prefix="/api/v1")
 app.include_router(notes.router,    prefix="/api/v1")
 app.include_router(locker.router,   prefix="/api/v1")
+app.include_router(chat.router,     prefix="/api/v1")
 
 
 # ── Health check ──────────────────────────────────────────────────────────────

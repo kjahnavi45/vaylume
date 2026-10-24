@@ -422,18 +422,21 @@ function bindNoteActionEvents(note) {
     });
   }
 
-  // Save to History
+  // Save to Cloud & Local Storage
   const saveBtn = document.getElementById('btn-save-note');
   if (saveBtn) {
-    saveBtn.addEventListener('click', () => {
-      const savedList = JSON.parse(localStorage.getItem('vaylume_saved_notes') || '[]');
-      if (!savedList.some(n => n.id === note.id)) {
-        savedList.unshift(note);
-        localStorage.setItem('vaylume_saved_notes', JSON.stringify(savedList));
-        renderSavedNotesList();
-        window.showToast('Saved to your private knowledge library!', 'success');
-      } else {
-        window.showToast('Note is already in your library.', 'info');
+    saveBtn.addEventListener('click', async () => {
+      try {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '💾 Saving to Cloud...';
+        await window.API.saveNote(note);
+        window.showToast('Note persisted securely to cloud database! ☁️', 'success');
+        await loadCloudNotes();
+      } catch (err) {
+        window.showToast('Saved to local offline notes.', 'info');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '💾 Save to My Library';
       }
     });
   }
@@ -463,10 +466,39 @@ function bindNoteActionEvents(note) {
 }
 
 /**
- * Saved Notes Library Drawer & Local Persistence
+ * Saved Notes Library Drawer & Cloud Persistence
  */
-function initSavedNotesDrawer() {
+let allSavedCloudNotes = [];
+
+async function loadCloudNotes() {
+  try {
+    if (window.API && typeof window.API.getSavedNotes === 'function') {
+      const notes = await window.API.getSavedNotes();
+      if (notes && notes.length) {
+        allSavedCloudNotes = notes.map(n => {
+          if (!n.sections || !n.sections.length) {
+            const secs = [];
+            if (n.explanation) secs.push({ title: '📖 Explanation', content: n.explanation });
+            if (n.key_points && n.key_points.length) secs.push({ title: '🎯 Key Points', content: n.key_points.map(k => `- ${k}`).join('\n') });
+            if (n.examples && n.examples.length) secs.push({ title: '💡 Examples', content: n.examples.map(e => `- ${e}`).join('\n') });
+            n.sections = secs;
+          }
+          return n;
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('[VAYLUME] Using cached notes');
+  }
+
+  if (!allSavedCloudNotes.length) {
+    allSavedCloudNotes = JSON.parse(localStorage.getItem('vaylume_saved_notes') || '[]');
+  }
   renderSavedNotesList();
+}
+
+async function initSavedNotesDrawer() {
+  await loadCloudNotes();
 
   const searchInput = document.getElementById('saved-notes-search');
   if (searchInput) {
@@ -481,64 +513,28 @@ function renderSavedNotesList(filterTerm = '') {
   const container = document.getElementById('saved-notes-history-list');
   if (!container) return;
 
-  let saved = JSON.parse(localStorage.getItem('vaylume_saved_notes') || '[]');
-
-  if (saved.length === 0) {
-    saved = [
-      {
-        id: 'note_demo_1',
-        topic: 'Quantum Computing Fundamentals',
-        language: 'English',
-        detected_language: 'English',
-        interest: 'Programming',
-        difficulty: 'Intermediate',
-        style: 'Detailed',
-        summary: 'Qubits, Superposition, Entanglement, and Quantum Gate Logic explained through developer models.',
-        sections: [
-          {
-            title: '1. Executive Overview & Mental Model',
-            content: 'Unlike classical bits representing 0 or 1, qubits exploit superposition to evaluate multidimensional states simultaneously.'
-          },
-          {
-            title: '2. Quantum Gates vs Logic Gates',
-            content: 'Hadamard gates create superposition, while CNOT gates establish entanglement across paired particles.'
-          }
-        ]
-      },
-      {
-        id: 'note_demo_2',
-        topic: 'భారతీయ సంగీత రాగాలు (Indian Ragas)',
-        language: 'Telugu',
-        detected_language: 'Telugu',
-        interest: 'Singing',
-        difficulty: 'Beginner',
-        style: 'Simple',
-        summary: 'కర్ణాటక మరియు హిందుస్తానీ సంగీతంలో ప్రాథమిక రాగాలు మరియు వాటి భావోద్వేగ లక్షణాలు.',
-        sections: [
-          {
-            title: '1. రాగాల ప్రాముఖ్యత',
-            content: 'రాగం అనేది స్వరాల కలయికతో ఏర్పడే శ్రావ్యమైన సంగీత రూపం. ప్రతి రాగానికి ఒక నిర్దిష్ట సమయం మరియు రసం ఉంటాయి.'
-          }
-        ]
-      }
-    ];
-    localStorage.setItem('vaylume_saved_notes', JSON.stringify(saved));
-  }
+  let saved = allSavedCloudNotes;
 
   if (filterTerm) {
     saved = saved.filter(n =>
-      n.topic.toLowerCase().includes(filterTerm) ||
+      (n.topic && n.topic.toLowerCase().includes(filterTerm)) ||
+      (n.title && n.title.toLowerCase().includes(filterTerm)) ||
       (n.language && n.language.toLowerCase().includes(filterTerm))
     );
+  }
+
+  if (saved.length === 0) {
+    container.innerHTML = '<div style="padding: 16px; font-size: 0.8rem; color: var(--text-muted); text-align: center;">No saved notes yet. Generate and save notes above!</div>';
+    return;
   }
 
   container.innerHTML = saved.map(item => `
     <div class="saved-note-item" data-id="${item.id}">
       <div class="saved-note-top">
-        <span class="badge badge-cyan" style="font-size: 0.68rem;">${window.escapeHtml(item.language)}</span>
-        <span class="saved-note-date">${item.difficulty}</span>
+        <span class="badge badge-cyan" style="font-size: 0.68rem;">${window.escapeHtml(item.language || 'English')}</span>
+        <span class="saved-note-date">${window.escapeHtml(item.difficulty || 'Intermediate')}</span>
       </div>
-      <h5 class="saved-note-title">${window.escapeHtml(item.topic)}</h5>
+      <h5 class="saved-note-title">${window.escapeHtml(item.title || item.topic)}</h5>
       <p class="saved-note-snippet">${window.escapeHtml(item.summary || '')}</p>
     </div>
   `).join('');
@@ -552,7 +548,7 @@ function renderSavedNotesList(filterTerm = '') {
         currentGeneratedNote = found;
         setGeneratingState(false);
         renderAiResponse(found);
-        window.showToast(`Loaded "${found.topic}"`, 'info', 2000);
+        window.showToast(`Loaded "${found.topic || found.title}"`, 'info', 2000);
       }
     });
   });

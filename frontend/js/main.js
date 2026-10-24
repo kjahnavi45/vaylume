@@ -630,11 +630,178 @@ function initSectionReveal() {
 }
 
 // Global initialization on DOM ready
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Offline Service Worker & Network Status Pill
+// ─────────────────────────────────────────────────────────────────────────────
+
+function initServiceWorker() {
+  if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('[VAYLUME] ServiceWorker registered with scope:', reg.scope))
+      .catch(err => console.warn('[VAYLUME] ServiceWorker registration failed:', err));
+  }
+}
+
+function initNetworkStatusBadge() {
+  const topbarActions = document.querySelector('.topbar-actions');
+  if (!topbarActions) return;
+
+  let badge = document.getElementById('network-status-badge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'network-status-badge';
+    badge.className = 'network-badge ' + (navigator.onLine ? 'online' : 'offline');
+    topbarActions.insertBefore(badge, topbarActions.firstChild);
+  }
+
+  function updateStatus() {
+    const isOnline = navigator.onLine;
+    badge.className = 'network-badge ' + (isOnline ? 'online' : 'offline');
+    badge.innerHTML = isOnline
+      ? '<span class="dot"></span> Online'
+      : '<span class="dot"></span> Offline';
+    badge.title = isOnline
+      ? 'Connected to VAYLUME cloud network'
+      : 'Working offline. Local changes will auto-sync when reconnected.';
+
+    let banner = document.getElementById('offline-alert-banner');
+    if (!isOnline) {
+      if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'offline-alert-banner';
+        banner.className = 'offline-alert-banner';
+        banner.innerHTML = `
+          <span>⚠️ <strong>Offline Mode:</strong> Viewing cached memories, notes, and documents works offline. AI generation, cloud uploads, and chat require an active connection.</span>
+          <button type="button" class="btn btn-sm btn-outline" style="padding: 2px 8px; font-size: 0.72rem; color: #fff;" onclick="this.parentElement.remove()">Dismiss</button>
+        `;
+        document.body.insertBefore(banner, document.body.firstChild);
+      }
+    } else {
+      if (banner) banner.remove();
+    }
+  }
+
+  window.addEventListener('online', updateStatus);
+  window.addEventListener('offline', updateStatus);
+  updateStatus();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Themes, Personalization & Custom Wallpaper Engine
+// ─────────────────────────────────────────────────────────────────────────────
+
+function applyUserTheme(prefs) {
+  if (!prefs) return;
+
+  const root = document.documentElement;
+  const theme = prefs.theme || 'dark';
+  const preset = prefs.preset_theme || 'cyan';
+
+  root.setAttribute('data-theme', theme);
+  root.setAttribute('data-preset', preset);
+
+  if (prefs.custom_accent) {
+    root.style.setProperty('--color-accent', prefs.custom_accent);
+    root.style.setProperty('--cyan-400', prefs.custom_accent);
+  }
+
+  let bgLayer = document.getElementById('vaylume-wallpaper-bg');
+  let overlayLayer = document.getElementById('vaylume-wallpaper-overlay');
+
+  if (prefs.wallpaper_url) {
+    if (!bgLayer) {
+      bgLayer = document.createElement('div');
+      bgLayer.id = 'vaylume-wallpaper-bg';
+      document.body.insertBefore(bgLayer, document.body.firstChild);
+    }
+    if (!overlayLayer) {
+      overlayLayer = document.createElement('div');
+      overlayLayer.id = 'vaylume-wallpaper-overlay';
+      document.body.insertBefore(overlayLayer, bgLayer.nextSibling);
+    }
+
+    bgLayer.style.backgroundImage = `url("${prefs.wallpaper_url}")`;
+    const blur = prefs.wallpaper_blur !== undefined ? prefs.wallpaper_blur : 0;
+    const brightness = prefs.wallpaper_brightness !== undefined ? prefs.wallpaper_brightness : 100;
+    bgLayer.style.filter = `blur(${blur}px) brightness(${brightness}%)`;
+
+    const opacity = prefs.wallpaper_overlay_opacity !== undefined ? prefs.wallpaper_overlay_opacity / 100 : 0.4;
+    const overlayColor = theme === 'light' ? `rgba(248, 250, 252, ${opacity})` : `rgba(7, 9, 14, ${opacity})`;
+    overlayLayer.style.backgroundColor = overlayColor;
+  } else {
+    if (bgLayer) bgLayer.style.backgroundImage = 'none';
+    if (overlayLayer) overlayLayer.style.backgroundColor = 'transparent';
+  }
+}
+
+async function initThemeEngine() {
+  // Apply immediate cached preferences to avoid flash
+  try {
+    const cached = localStorage.getItem('vaylume_user_prefs');
+    if (cached) applyUserTheme(JSON.parse(cached));
+  } catch (e) {}
+
+  // Fetch updated preferences from server if API is available
+  if (window.API && typeof window.API.getPreferences === 'function') {
+    try {
+      const prefs = await window.API.getPreferences();
+      applyUserTheme(prefs);
+    } catch (e) {
+      console.warn('[VAYLUME] Using cached theme preferences');
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auto-Lock Inactivity Watcher
+// ─────────────────────────────────────────────────────────────────────────────
+
+let autoLockTimer = null;
+
+function resetAutoLockTimer(minutes) {
+  if (autoLockTimer) clearTimeout(autoLockTimer);
+  if (!minutes || minutes <= 0) return;
+
+  autoLockTimer = setTimeout(() => {
+    if (window.API && typeof window.API.lockVault === 'function') {
+      console.log('[VAYLUME] Inactivity auto-lock triggered.');
+      window.API.lockVault();
+      if (typeof window.showToast === 'function') {
+        window.showToast('Vault automatically locked due to inactivity 🔒', 'warning');
+      }
+      // Reload or trigger lock barrier if on vault page
+      if (typeof evaluateVaultAccess === 'function') {
+        evaluateVaultAccess();
+      }
+    }
+  }, minutes * 60 * 1000);
+}
+
+function initAutoLockWatcher() {
+  try {
+    const prefs = JSON.parse(localStorage.getItem('vaylume_user_prefs') || '{}');
+    const minutes = prefs.auto_lock_minutes !== undefined ? prefs.auto_lock_minutes : 15;
+    if (minutes > 0) {
+      const reset = () => resetAutoLockTimer(minutes);
+      window.addEventListener('mousemove', reset, { passive: true });
+      window.addEventListener('keydown', reset, { passive: true });
+      window.addEventListener('touchstart', reset, { passive: true });
+      reset();
+    }
+  } catch (e) {}
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
+  initServiceWorker();
+  initThemeEngine();
+  initNetworkStatusBadge();
   initLanguageDropdown();
   initNavigation();
   syncUserInfo();
   initSectionReveal();
+  initAutoLockWatcher();
 });
 
 // Export globally
@@ -645,3 +812,6 @@ window.triggerSmoothLogout = triggerSmoothLogout;
 window.setActiveLanguage = setActiveLanguage;
 window.getActiveLanguage = getActiveLanguage;
 window.SUPPORTED_LANGUAGES = SUPPORTED_LANGUAGES;
+
+window.applyUserTheme = applyUserTheme;
+window.initThemeEngine = initThemeEngine;

@@ -1,5 +1,5 @@
 -- ============================================================
--- VAYLUME — Supabase PostgreSQL Schema
+-- VAYLUME — Supabase PostgreSQL Production Schema
 -- Run this in Supabase SQL Editor (Dashboard → SQL Editor)
 -- ============================================================
 
@@ -9,17 +9,35 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ─────────────────────────────────────────────────────────────
 -- 1. user_preferences
---    Stores per-user settings (language, theme, etc.)
+--    Stores per-user theme, accent, custom wallpaper & vault settings
 --    Linked to Supabase Auth via auth.users
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.user_preferences (
-    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id         UUID        NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-    preferred_language  TEXT    NOT NULL DEFAULT 'English',
-    theme           TEXT        NOT NULL DEFAULT 'light',
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id                      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id                 UUID        NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+    preferred_language      TEXT        NOT NULL DEFAULT 'English',
+    theme                   TEXT        NOT NULL DEFAULT 'dark',       -- 'dark', 'light', 'preset'
+    preset_theme            TEXT        NOT NULL DEFAULT 'cyan',       -- 'cyan', 'purple', 'emerald', 'amber', 'minimal'
+    custom_accent           TEXT        NOT NULL DEFAULT '#00f2fe',
+    wallpaper_url           TEXT,                                      -- Custom background image URL / data
+    wallpaper_blur          INT         NOT NULL DEFAULT 0,            -- 0 to 25px
+    wallpaper_brightness    INT         NOT NULL DEFAULT 100,          -- 20 to 120%
+    wallpaper_overlay_opacity INT       NOT NULL DEFAULT 40,           -- 0 to 90%
+    auto_lock_minutes       INT         NOT NULL DEFAULT 5,            -- 0 = disabled, 1, 5, 15, 30 min
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Ensure backwards-compatibility for existing deployments
+ALTER TABLE public.user_preferences ADD COLUMN IF NOT EXISTS preset_theme TEXT DEFAULT 'cyan';
+ALTER TABLE public.user_preferences ADD COLUMN IF NOT EXISTS custom_accent TEXT DEFAULT '#00f2fe';
+ALTER TABLE public.user_preferences ADD COLUMN IF NOT EXISTS wallpaper_url TEXT;
+ALTER TABLE public.user_preferences ADD COLUMN IF NOT EXISTS wallpaper_blur INT DEFAULT 0;
+ALTER TABLE public.user_preferences ADD COLUMN IF NOT EXISTS wallpaper_brightness INT DEFAULT 100;
+ALTER TABLE public.user_preferences ADD COLUMN IF NOT EXISTS wallpaper_overlay_opacity INT DEFAULT 40;
+ALTER TABLE public.user_preferences ADD COLUMN IF NOT EXISTS auto_lock_minutes INT DEFAULT 5;
+
+CREATE INDEX IF NOT EXISTS user_preferences_user_idx ON public.user_preferences (user_id);
 
 ALTER TABLE public.user_preferences ENABLE ROW LEVEL SECURITY;
 
@@ -47,7 +65,6 @@ CREATE TABLE IF NOT EXISTS public.memories (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Ensure backwards-compatibility for existing deployments
 ALTER TABLE public.memories ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'Personal';
 ALTER TABLE public.memories ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '[]';
 
@@ -66,7 +83,7 @@ CREATE POLICY "Users can manage their own memories"
 
 -- ─────────────────────────────────────────────────────────────
 -- 3. vault_security
---    Two-Step Lock credentials (WebAuthn Passkey + 3x3 Pattern)
+--    Two-Step Lock credentials (WebAuthn Passkey + 3x3 Pattern + PIN)
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.vault_security (
     user_id                 UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -93,7 +110,7 @@ CREATE POLICY "Users can manage their own vault security"
 
 -- ─────────────────────────────────────────────────────────────
 -- 4. notes
---    AI-generated study notes (optional persistence)
+--    AI-generated and user study notes (Cloud Persistence)
 -- ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.notes (
     id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -107,9 +124,14 @@ CREATE TABLE IF NOT EXISTS public.notes (
     key_points      JSONB       NOT NULL DEFAULT '[]',
     examples        JSONB       NOT NULL DEFAULT '[]',
     summary         TEXT        NOT NULL,
+    tags            JSONB       DEFAULT '[]',
     generated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS tags JSONB DEFAULT '[]';
+ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS notes_user_id_idx ON public.notes (user_id);
 CREATE INDEX IF NOT EXISTS notes_created_at_idx ON public.notes (created_at DESC);
@@ -157,27 +179,95 @@ CREATE POLICY "Users can manage their own documents"
 
 
 -- ─────────────────────────────────────────────────────────────
--- 6. Storage buckets (Supabase Dashboard → Storage)
+-- 6. conversations (Private 1-on-1 User-to-User Chat)
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.conversations (
+    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user1_id        UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    user2_id        UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    status          TEXT        NOT NULL DEFAULT 'accepted', -- 'accepted', 'pending', 'blocked'
+    last_message    TEXT,
+    last_message_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT unique_conversation_pair UNIQUE (user1_id, user2_id)
+);
+
+CREATE INDEX IF NOT EXISTS conversations_user1_idx ON public.conversations (user1_id);
+CREATE INDEX IF NOT EXISTS conversations_user2_idx ON public.conversations (user2_id);
+CREATE INDEX IF NOT EXISTS conversations_updated_idx ON public.conversations (last_message_at DESC);
+
+ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage their own conversations"
+    ON public.conversations
+    FOR ALL
+    USING  (auth.uid() = user1_id OR auth.uid() = user2_id)
+    WITH CHECK (auth.uid() = user1_id OR auth.uid() = user2_id);
+
+
+-- ─────────────────────────────────────────────────────────────
+-- 7. messages (Chat Messages with Delivery Status)
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.messages (
+    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID        NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
+    sender_id       UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    recipient_id    UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    content         TEXT        NOT NULL CHECK (char_length(content) BETWEEN 1 AND 5000),
+    status          TEXT        NOT NULL DEFAULT 'sent', -- 'sent', 'delivered', 'read'
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS messages_conv_idx ON public.messages (conversation_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS messages_sender_idx ON public.messages (sender_id);
+CREATE INDEX IF NOT EXISTS messages_recipient_idx ON public.messages (recipient_id);
+
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view messages in their conversations"
+    ON public.messages
+    FOR ALL
+    USING  (auth.uid() = sender_id OR auth.uid() = recipient_id)
+    WITH CHECK (auth.uid() = sender_id);
+
+
+-- ─────────────────────────────────────────────────────────────
+-- 8. user_blocks (Block & Report Enforcement)
+-- ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.user_blocks (
+    blocker_id      UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    blocked_id      UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (blocker_id, blocked_id)
+);
+
+ALTER TABLE public.user_blocks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view and manage their blocked list"
+    ON public.user_blocks
+    FOR ALL
+    USING  (auth.uid() = blocker_id)
+    WITH CHECK (auth.uid() = blocker_id);
+
+
+-- ─────────────────────────────────────────────────────────────
+-- 9. Storage buckets (Supabase Dashboard → Storage)
 -- ─────────────────────────────────────────────────────────────
 -- Create these buckets in Supabase Storage and set them to PRIVATE:
 --
 --   Bucket name: memories     (for memory photos)
 --   Bucket name: locker       (for locker documents)
+--   Bucket name: wallpapers   (for custom user wallpapers)
 --
 -- Storage RLS policies — example for 'memories' bucket:
---
--- INSERT policy:
---   ((storage.foldername(name))[1] = auth.uid()::text)
---
--- SELECT / DELETE policy:
---   ((storage.foldername(name))[1] = auth.uid()::text)
---
--- Apply the same pattern for the 'locker' bucket.
+--   INSERT: ((storage.foldername(name))[1] = auth.uid()::text)
+--   SELECT / DELETE: ((storage.foldername(name))[1] = auth.uid()::text)
 -- ─────────────────────────────────────────────────────────────
 
 
 -- ─────────────────────────────────────────────────────────────
--- 7. Trigger: auto-update updated_at columns
+-- 10. Triggers: auto-update updated_at columns
 -- ─────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.update_updated_at()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -197,4 +287,12 @@ CREATE TRIGGER vault_security_updated_at
 
 CREATE TRIGGER user_preferences_updated_at
     BEFORE UPDATE ON public.user_preferences
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+CREATE TRIGGER notes_updated_at
+    BEFORE UPDATE ON public.notes
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+CREATE TRIGGER conversations_updated_at
+    BEFORE UPDATE ON public.conversations
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();

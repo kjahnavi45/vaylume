@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -54,7 +54,7 @@ class NoteFormat(str, Enum):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Auth
+# Auth & User Profile
 # ─────────────────────────────────────────────────────────────────────────────
 
 class SignUpRequest(BaseModel):
@@ -76,7 +76,17 @@ class UserResponse(BaseModel):
     id: str
     email: str
     full_name: Optional[str] = None
+    phone: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
     created_at: Optional[datetime] = None
+
+
+class UserProfileUpdateRequest(BaseModel):
+    full_name: Optional[str] = Field(None, min_length=1, max_length=120)
+    phone: Optional[str] = Field(None, max_length=20)
+    bio: Optional[str] = Field(None, max_length=500)
+    avatar_url: Optional[str] = None
 
 
 class AuthResponse(BaseModel):
@@ -87,6 +97,49 @@ class AuthResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+class AccountDeleteRequest(BaseModel):
+    confirm_text: str = Field(..., description="Must exactly match 'DELETE MY ACCOUNT'")
+    password: Optional[str] = None
+
+
+class DataExportResponse(BaseModel):
+    user: UserResponse
+    preferences: Optional[Dict[str, Any]] = None
+    memories: List[Dict[str, Any]] = Field(default_factory=list)
+    notes: List[Dict[str, Any]] = Field(default_factory=list)
+    documents: List[Dict[str, Any]] = Field(default_factory=list)
+    conversations: List[Dict[str, Any]] = Field(default_factory=list)
+    messages: List[Dict[str, Any]] = Field(default_factory=list)
+    exported_at: datetime
+    disclaimer: str = (
+        "This export contains your personal digital records stored in VAYLUME. "
+        "Sensitive documents and photos should be downloaded separately via your private locker."
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Themes & Personalization
+# ─────────────────────────────────────────────────────────────────────────────
+
+class UserPreferencesRequest(BaseModel):
+    preferred_language: Optional[str] = "English"
+    theme: Optional[str] = "dark" # "dark", "light", "preset"
+    preset_theme: Optional[str] = "cyan" # "cyan", "purple", "emerald", "amber", "minimal"
+    custom_accent: Optional[str] = "#00f2fe"
+    wallpaper_url: Optional[str] = None
+    wallpaper_blur: Optional[int] = Field(0, ge=0, le=30)
+    wallpaper_brightness: Optional[int] = Field(100, ge=20, le=150)
+    wallpaper_overlay_opacity: Optional[int] = Field(40, ge=0, le=95)
+    auto_lock_minutes: Optional[int] = Field(5, ge=0, le=120)
+
+
+class UserPreferencesResponse(UserPreferencesRequest):
+    id: UUID
+    user_id: str
+    created_at: datetime
+    updated_at: datetime
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -176,7 +229,7 @@ class BatchMemoryResponse(BaseModel):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# AI Notes
+# AI Notes & Cloud Persistence
 # ─────────────────────────────────────────────────────────────────────────────
 
 class NoteGenerateRequest(BaseModel):
@@ -200,9 +253,29 @@ class NoteResponse(BaseModel):
     generated_at: datetime
 
 
+class NoteSaveRequest(BaseModel):
+    topic: str = Field(..., min_length=1, max_length=300)
+    title: str = Field(..., min_length=1, max_length=300)
+    explanation: str
+    key_points: List[str] = Field(default_factory=list)
+    examples: List[str] = Field(default_factory=list)
+    summary: str
+    language: str = "English"
+    difficulty: str = "Intermediate"
+    format: str = "Bullets"
+    tags: Optional[List[str]] = Field(default_factory=list)
+
+
 class NoteSavedResponse(NoteResponse):
     id: UUID
     user_id: str
+    tags: Optional[List[str]] = Field(default_factory=list)
+    created_at: datetime
+
+
+class NoteListResponse(BaseModel):
+    notes: List[NoteSavedResponse]
+    total: int
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -218,7 +291,6 @@ class LockerFileResponse(BaseModel):
     mime_type: str
     size_bytes: int
     storage_path: str
-    # Signed URL is generated on demand, never stored raw
     download_url: Optional[str] = None
     created_at: datetime
 
@@ -226,6 +298,56 @@ class LockerFileResponse(BaseModel):
 class LockerFileListResponse(BaseModel):
     files: List[LockerFileResponse]
     total: int
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Private 1-on-1 User-to-User Chat
+# ─────────────────────────────────────────────────────────────────────────────
+
+class ConversationCreateRequest(BaseModel):
+    recipient_email: Optional[EmailStr] = None
+    recipient_id: Optional[str] = None
+
+
+class MessageSendRequest(BaseModel):
+    content: str = Field(..., min_length=1, max_length=5000)
+
+
+class MessageItemResponse(BaseModel):
+    id: UUID
+    conversation_id: UUID
+    sender_id: str
+    recipient_id: str
+    content: str
+    status: str = "sent" # "sent", "delivered", "read"
+    created_at: datetime
+
+
+class ConversationResponse(BaseModel):
+    id: UUID
+    participant_id: str
+    participant_email: str
+    participant_name: Optional[str] = None
+    status: str = "accepted" # "accepted", "pending", "blocked"
+    last_message: Optional[str] = None
+    last_message_at: datetime
+    unread_count: int = 0
+    created_at: datetime
+
+
+class ConversationListResponse(BaseModel):
+    conversations: List[ConversationResponse]
+    total: int
+
+
+class MessageListResponse(BaseModel):
+    messages: List[MessageItemResponse]
+    conversation: ConversationResponse
+
+
+class BlockUserRequest(BaseModel):
+    user_id: str
+    reason: Optional[str] = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -317,13 +317,16 @@ def _generate_fallback_notes(
     }
 
     t = templates.get(target_language, templates["English"])
+    summary_text = t["summary"]
+    if not _HAS_GEMINI_KEY:
+        summary_text = f"[Setup Required: Configure GEMINI_API_KEY in backend/.env for live Gemini AI] {summary_text}"
 
     return NoteResponse(
         title=t["title"],
         explanation=t["explanation"],
         key_points=t["key_points"],
         examples=t["examples"],
-        summary=t["summary"],
+        summary=summary_text,
         language=target_language,
         detected_language=detected_display,
         topic=topic,

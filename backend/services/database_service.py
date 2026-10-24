@@ -30,6 +30,9 @@ _MOCK_DB: Dict[str, List[Dict[str, Any]]] = {
     "notes": [],
     "documents": [],
     "user_preferences": [],
+    "conversations": [],
+    "messages": [],
+    "user_blocks": [],
 }
 
 
@@ -120,6 +123,21 @@ class DatabaseService:
                 query = query.eq(col, val)
         if order_by:
             query = query.order(order_by, desc=not ascending)
+        response = query.execute()
+        return response.data or []
+
+    def fetch_user_conversations(self, user_id: str) -> List[Dict[str, Any]]:
+        """Fetch all conversations where the user is either user1 or user2."""
+        if self._db is None:
+            with _lock:
+                rows = [
+                    copy.deepcopy(r) for r in _MOCK_DB.get("conversations", [])
+                    if str(r.get("user1_id")) == str(user_id) or str(r.get("user2_id")) == str(user_id)
+                ]
+                rows.sort(key=lambda x: str(x.get("last_message_at", "")), reverse=True)
+                return rows
+
+        query = self._db.table("conversations").select("*").or_(f"user1_id.eq.{user_id},user2_id.eq.{user_id}").order("last_message_at", desc=True)
         response = query.execute()
         return response.data or []
 
@@ -245,3 +263,25 @@ class DatabaseService:
 
         self._db.table(table).delete().eq(id_column, str(record_id)).execute()
         return True
+
+    def delete_all(
+        self,
+        table: str,
+        filters: Dict[str, Any],
+    ) -> int:
+        """Delete all rows matching the given filters."""
+        if self._db is None:
+            with _lock:
+                rows = _MOCK_DB.get(table, [])
+                before_len = len(rows)
+                _MOCK_DB[table] = [
+                    r for r in rows
+                    if not all(str(r.get(k)) == str(v) for k, v in filters.items())
+                ]
+                return before_len - len(_MOCK_DB[table])
+
+        query = self._db.table(table).delete()
+        for col, val in filters.items():
+            query = query.eq(col, val)
+        response = query.execute()
+        return len(response.data or [])

@@ -3,8 +3,8 @@ Application settings loaded from environment variables.
 All secrets must be provided via .env — never hardcode credentials here.
 """
 
-from pydantic_settings import BaseSettings
 from functools import lru_cache
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     # ── Storage ───────────────────────────────────────────────────────────────
     STORAGE_BUCKET_MEMORIES: str = "memories"
     STORAGE_BUCKET_LOCKER: str = "locker"
+    STORAGE_BUCKET_WALLPAPERS: str = "wallpapers"
 
     # ── CORS ──────────────────────────────────────────────────────────────────
     # Comma-separated list of allowed origins, e.g. http://localhost:5500,https://vaylume.app

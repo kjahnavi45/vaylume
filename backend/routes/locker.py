@@ -1,10 +1,10 @@
 """
 Digital Locker routes.
 
-POST   /locker/upload        — Upload a private document
-GET    /locker/files         — List all files for the current user
-GET    /locker/files/{id}    — Get metadata + signed download URL for a file
-DELETE /locker/files/{id}    — Delete a file permanently
+POST   /locker/upload        — Upload a private document (Vault-protected)
+GET    /locker/files         — List all files for current user (Vault-protected)
+GET    /locker/files/{id}    — Get metadata + signed download URL (Vault-protected)
+DELETE /locker/files/{id}    — Delete a file permanently (Vault-protected)
 """
 
 from __future__ import annotations
@@ -34,8 +34,9 @@ from services.auth_service import get_current_user
 from services.database_service import DatabaseService, get_authed_client
 from services.storage_service import StorageService
 from utils.dependencies import get_current_user_jwt
+from utils.vault_dependency import require_vault_unlocked
 
-router = APIRouter(prefix="/locker", tags=["Digital Locker"])
+router = APIRouter(prefix="/locker", tags=["Digital Locker (Secure Document Vault)"])
 settings = get_settings()
 
 TABLE = "documents"
@@ -55,10 +56,10 @@ def _storage(jwt: str) -> StorageService:
     "/upload",
     response_model=LockerFileResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Upload a document to the Digital Locker",
+    summary="Upload a document to the Secure Document Vault",
     description=(
-        "Uploads a private document. Allowed categories: "
-        "Identity, Education, Certificates, Career, Personal, Other. "
+        "Uploads a private document. Protected by Two-Step Vault Lock. "
+        "Allowed categories: Identity, Education, Certificates, Career, Personal, Other. "
         "Max file size is configurable via MAX_LOCKER_FILE_SIZE_MB."
     ),
 )
@@ -66,6 +67,7 @@ async def upload_file(
     category: DocumentCategory = Form(...),
     file: UploadFile = File(...),
     jwt: str = Depends(get_current_user_jwt),
+    _vault: str = Depends(require_vault_unlocked),
 ):
     user = get_current_user(jwt)
     db = _db(jwt)
@@ -91,7 +93,6 @@ async def upload_file(
     try:
         inserted = db.insert(TABLE, record)
     except Exception as exc:
-        # Roll back the orphaned file in storage
         storage.delete_file(settings.STORAGE_BUCKET_LOCKER, storage_path)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -104,9 +105,12 @@ async def upload_file(
 @router.get(
     "/files",
     response_model=LockerFileListResponse,
-    summary="List all locker files for the current user",
+    summary="List all vault documents for the current user",
 )
-def list_files(jwt: str = Depends(get_current_user_jwt)):
+def list_files(
+    jwt: str = Depends(get_current_user_jwt),
+    _vault: str = Depends(require_vault_unlocked),
+):
     user = get_current_user(jwt)
     db = _db(jwt)
     storage = _storage(jwt)
@@ -119,9 +123,13 @@ def list_files(jwt: str = Depends(get_current_user_jwt)):
 @router.get(
     "/files/{file_id}",
     response_model=LockerFileResponse,
-    summary="Get a specific locker file with a signed download URL",
+    summary="Get a specific locker file with a short-lived signed download URL",
 )
-def get_file(file_id: UUID, jwt: str = Depends(get_current_user_jwt)):
+def get_file(
+    file_id: UUID,
+    jwt: str = Depends(get_current_user_jwt),
+    _vault: str = Depends(require_vault_unlocked),
+):
     user = get_current_user(jwt)
     db = _db(jwt)
     storage = _storage(jwt)
@@ -130,7 +138,7 @@ def get_file(file_id: UUID, jwt: str = Depends(get_current_user_jwt)):
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "NOT_FOUND", "message": "File not found"},
+            detail={"code": "NOT_FOUND", "message": "Document not found"},
         )
     return _to_response(row, storage)
 
@@ -140,7 +148,11 @@ def get_file(file_id: UUID, jwt: str = Depends(get_current_user_jwt)):
     response_model=MessageResponse,
     summary="Delete a locker file permanently",
 )
-def delete_file(file_id: UUID, jwt: str = Depends(get_current_user_jwt)):
+def delete_file(
+    file_id: UUID,
+    jwt: str = Depends(get_current_user_jwt),
+    _vault: str = Depends(require_vault_unlocked),
+):
     user = get_current_user(jwt)
     db = _db(jwt)
     storage = _storage(jwt)
@@ -149,14 +161,13 @@ def delete_file(file_id: UUID, jwt: str = Depends(get_current_user_jwt)):
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "NOT_FOUND", "message": "File not found"},
+            detail={"code": "NOT_FOUND", "message": "Document not found"},
         )
 
-    # Delete from storage first, then DB
     storage.delete_file(settings.STORAGE_BUCKET_LOCKER, row["storage_path"])
     db.delete(TABLE, file_id)
 
-    return MessageResponse(message="File deleted successfully")
+    return MessageResponse(message="Document deleted permanently from secure vault")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

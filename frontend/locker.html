@@ -10,6 +10,131 @@
 </head>
 <body>
 
+  <!-- Full-Screen Two-Step Lock Barrier Overlay -->
+  <div class="vault-lock-overlay" id="vault-lock-overlay" role="dialog" aria-modal="true" aria-labelledby="vault-lock-title">
+    
+    <!-- UNLOCK VIEW (When already configured) -->
+    <div class="vault-lock-card" id="vault-unlock-view">
+      <div class="vault-card-header">
+        <div class="vault-card-icon">🛡️</div>
+        <h2 class="vault-card-title" id="vault-lock-title">Two-Step Security Lock</h2>
+        <p class="vault-card-subtitle" id="vault-lock-subtitle">
+          Digital Locker Vault is encrypted. Complete two-factor authentication to unlock confidential documents.
+        </p>
+      </div>
+
+      <!-- Steps Indicator -->
+      <div class="vault-steps-nav">
+        <div class="vault-step-pill active" id="pill-step-1">1. Biometric / Passkey</div>
+        <div class="vault-step-pill" id="pill-step-2">2. 3x3 Pattern Lock</div>
+      </div>
+
+      <!-- STEP 1: Biometric / Passkey Authentication -->
+      <div id="unlock-step-1-content">
+        <div class="biometric-scanner-box">
+          <div class="fingerprint-sensor" id="btn-trigger-biometric" title="Click to scan fingerprint / passkey" role="button" tabindex="0">
+            👆
+          </div>
+          <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;" id="bio-status-text">
+            Touch sensor or use Device Passkey
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">
+            Windows Hello • Touch ID • Face ID • Android Biometrics
+          </div>
+
+          <!-- Fallback PIN toggle -->
+          <div id="pin-fallback-container" style="display: none; width: 100%; margin-top: 10px;">
+            <label for="fallback-pin-input" class="form-label" style="text-align: center;">Enter Vault Fallback PIN</label>
+            <input type="password" id="fallback-pin-input" class="form-control pin-input-field" maxlength="8" placeholder="••••" autocomplete="off">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-verify-pin" style="width: 100%; margin-top: 10px;">
+              Verify Fallback PIN
+            </button>
+          </div>
+
+          <button type="button" class="btn btn-link btn-sm" id="btn-toggle-pin-mode" style="margin-top: 12px; color: var(--cyan-400); font-size: 0.82rem;">
+            Use Cryptographic Fallback PIN instead
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Interactive 3x3 Pattern Lock (Hidden until Step 1 passes) -->
+      <div id="unlock-step-2-content" style="display: none;">
+        <div class="pattern-lock-area">
+          <div class="pattern-canvas-wrapper" id="pattern-wrapper">
+            <canvas id="pattern-canvas" width="280" height="280" class="pattern-canvas"></canvas>
+          </div>
+          <div class="pattern-hint" id="pattern-hint-text">
+            Draw your 3x3 pattern to unlock (minimum 4 connected dots)
+          </div>
+          <div style="margin-top: 14px; display: flex; gap: 10px;">
+            <button type="button" class="btn btn-outline btn-sm" id="btn-clear-pattern">
+              🔄 Reset Pattern
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETUP VIEW (First-time user enrollment) -->
+    <div class="vault-lock-card" id="vault-setup-view" style="display: none;">
+      <div class="vault-card-header">
+        <div class="vault-card-icon">🔐</div>
+        <h2 class="vault-card-title">Setup Two-Step Vault Lock</h2>
+        <p class="vault-card-subtitle">
+          Protect your private files and documents with mandatory device biometrics plus a 3x3 pattern.
+        </p>
+      </div>
+
+      <!-- Setup Step 1: Passkey / Biometrics -->
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label class="form-label">Step 1: Device Biometrics / Passkey</label>
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; text-align: left;">
+          <div style="font-size: 0.88rem; font-weight: 600; margin-bottom: 4px;" id="setup-bio-title">
+            Register Platform Authenticator
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">
+            Creates a cryptographic WebAuthn credential bound to your physical device.
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-register-passkey">
+            🔑 Enroll Device Passkey
+          </button>
+          <span id="passkey-setup-badge" class="badge badge-emerald" style="display: none; margin-left: 8px;">✓ Enrolled</span>
+        </div>
+      </div>
+
+      <!-- Setup Step 1B: Fallback PIN -->
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label for="setup-fallback-pin" class="form-label">Fallback Security PIN (4-8 Digits)</label>
+        <input type="password" id="setup-fallback-pin" class="form-control" maxlength="8" placeholder="Enter secure PIN (e.g. 1234)">
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+          Used as a secure fallback if biometrics or platform passkey is unavailable on this browser.
+        </div>
+      </div>
+
+      <!-- Setup Step 2: 3x3 Pattern Lock -->
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label class="form-label">Step 2: Draw Your 3x3 Pattern Lock</label>
+        <div class="pattern-lock-area">
+          <div class="pattern-canvas-wrapper" id="setup-pattern-wrapper">
+            <canvas id="setup-pattern-canvas" width="280" height="280" class="pattern-canvas"></canvas>
+          </div>
+          <div class="pattern-hint" id="setup-pattern-hint">
+            Draw your master pattern across the 9 dots (min 4 dots)
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" id="btn-clear-setup-pattern" style="margin-top: 10px;">
+            🔄 Clear Pattern
+          </button>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-primary" id="btn-save-vault-setup" style="width: 100%;">
+        🛡️ Encrypt & Enable Two-Step Lock
+      </button>
+    </div>
+
+  </div>
+
+
   <div class="app-layout">
     
     <!-- Sidebar Navigation -->
@@ -47,6 +172,13 @@
               <span class="menu-icon">📁</span>
               <span data-i18n="nav_locker">Digital Locker</span>
               <span class="sidebar-badge" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald-400);">AES-256</span>
+            </a>
+          </li>
+          <li>
+            <a href="chat.html" class="sidebar-link">
+              <span class="menu-icon">💬</span>
+              <span>Private Chat</span>
+              <span class="sidebar-badge" style="background: rgba(0, 242, 254, 0.15); color: var(--cyan-400);">1:1</span>
             </a>
           </li>
         </ul>
@@ -108,6 +240,9 @@
             <div class="lang-dropdown-menu" role="menu" aria-labelledby="locker-lang-btn"></div>
           </div>
 
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-lock-vault">
+            🔒 Lock Vault
+          </button>
           <button type="button" class="btn btn-primary btn-sm" onclick="window.openModal('upload-document-modal')">
             + Upload Document
           </button>
@@ -123,6 +258,7 @@
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
               <h1 style="font-size: 1.85rem; margin-bottom: 0;">Zero-Knowledge Digital Locker</h1>
               <span class="badge badge-emerald">🔒 Client-Side AES-256</span>
+              <span id="vault-status-indicator" class="badge badge-emerald">🔓 Vault Unlocked</span>
             </div>
             <p style="font-size: 0.95rem; color: var(--text-muted);">
               Store identity proofs, academic credentials, and confidential records with zero public exposure.
@@ -294,6 +430,7 @@
 
   <script src="js/api.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/vault-lock.js"></script>
   <script src="js/locker.js"></script>
 </body>
 </html>

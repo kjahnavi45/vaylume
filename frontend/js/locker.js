@@ -18,7 +18,15 @@ let currentSearch = '';
 let activeUploadFile = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadDocuments();
+  if (window.VaultLock) {
+    window.VaultLock.init({
+      onUnlock: async () => {
+        await loadDocuments();
+      }
+    });
+  } else {
+    await loadDocuments();
+  }
   initLockerSearchAndFilters();
   initUploadModal();
 });
