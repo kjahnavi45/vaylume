@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+from fastapi import HTTPException, status
 from supabase import Client, create_client
 
 from config.settings import get_settings
@@ -21,11 +22,21 @@ settings = get_settings()
 
 def _get_anon_client() -> Client:
     """Anon client — respects Row Level Security. Use for user-scoped operations."""
+    if not settings.SUPABASE_URL or not settings.SUPABASE_ANON_KEY or "your-project" in settings.SUPABASE_URL:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "SUPABASE_NOT_CONFIGURED", "message": "Supabase credentials are not configured in backend/.env"},
+        )
     return create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
 
 
 def _get_service_client() -> Client:
     """Service-role client — bypasses RLS. Use only for admin / server-side tasks."""
+    if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY or "your-project" in settings.SUPABASE_URL:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "SUPABASE_NOT_CONFIGURED", "message": "Supabase credentials are not configured in backend/.env"},
+        )
     return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 
 

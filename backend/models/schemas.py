@@ -27,6 +27,7 @@ class DocumentCategory(str, Enum):
 
 
 class NoteLanguage(str, Enum):
+    AUTO = "Auto"
     ENGLISH = "English"
     TELUGU = "Telugu"
     HINDI = "Hindi"
@@ -126,7 +127,8 @@ class MemoryListResponse(BaseModel):
 
 class NoteGenerateRequest(BaseModel):
     topic: str = Field(..., min_length=1, max_length=300)
-    language: NoteLanguage = NoteLanguage.ENGLISH
+    language: NoteLanguage = NoteLanguage.AUTO
+    detected_language: Optional[str] = Field(None, description="Client or server detected language")
     interest: Optional[str] = Field(None, max_length=200, description="User's interest area for personalised examples")
     difficulty: NoteDifficulty = NoteDifficulty.INTERMEDIATE
     format: NoteFormat = NoteFormat.BULLETS
@@ -139,6 +141,7 @@ class NoteResponse(BaseModel):
     examples: List[str]
     summary: str
     language: str
+    detected_language: Optional[str] = None
     topic: str
     generated_at: datetime
 

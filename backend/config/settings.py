@@ -9,12 +9,12 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # ── Supabase ──────────────────────────────────────────────────────────────
-    SUPABASE_URL: str
-    SUPABASE_ANON_KEY: str
-    SUPABASE_SERVICE_ROLE_KEY: str
+    SUPABASE_URL: str = ""
+    SUPABASE_ANON_KEY: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
 
     # ── Gemini (Google AI) ────────────────────────────────────────────────────
-    GEMINI_API_KEY: str
+    GEMINI_API_KEY: str = ""
 
     # ── Storage ───────────────────────────────────────────────────────────────
     STORAGE_BUCKET_MEMORIES: str = "memories"
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     # ── CORS ──────────────────────────────────────────────────────────────────
     # Comma-separated list of allowed origins, e.g. http://localhost:5500,https://vaylume.app
-    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5500,http://127.0.0.1:5500"
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5500,http://127.0.0.1:5500,http://localhost:8000,http://127.0.0.1:8000,http://localhost:8080,http://127.0.0.1:8080"
 
     # ── File upload limits ────────────────────────────────────────────────────
     MAX_MEMORY_IMAGE_SIZE_MB: int = 10

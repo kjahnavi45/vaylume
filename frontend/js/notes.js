@@ -3,6 +3,10 @@
  * VAYLUME - AI Notes Studio Controller (notes.js)
  * ==========================================================================
  * Features:
+ * - Real-time input language detection (Telugu, Hindi, Gujarati, Marathi,
+ *   Kannada, Tamil, Malayalam, Bengali, Punjabi, English + Tenglish/Hinglish)
+ * - Automatic same-language reply by default with manual language override
+ * - Live UI feedback pill showing detected language as user types
  * - Multilingual AI note generator with interest, difficulty & style selectors
  * - Custom interest dynamic input trigger
  * - Multi-stage radar synthesis animation
@@ -12,30 +16,201 @@
  */
 
 let currentGeneratedNote = null;
+let currentDetectedLanguage = { display: 'English', code: 'English', isRomanized: false };
 
 document.addEventListener('DOMContentLoaded', () => {
-  initNotesForm();
   initLanguageSelector();
+  initTopicInputDetection();
+  initNotesForm();
   initSavedNotesDrawer();
 });
 
 /**
- * Populate supported languages into the AI language selector
+ * Client-Side Input Language Detector
+ * Detects native Unicode Indic scripts and Romanized transliterations (Tenglish, Hinglish, etc.)
+ */
+function detectInputLanguage(text) {
+  if (!text || !text.trim()) {
+    return { display: 'English', code: 'English', isRomanized: false };
+  }
+
+  const clean = text.trim();
+
+  // 1. Unicode script character ranges
+  const scriptRanges = [
+    { name: 'Telugu',    start: 0x0C00, end: 0x0C7F },
+    { name: 'Hindi',     start: 0x0900, end: 0x097F },
+    { name: 'Gujarati',  start: 0x0A80, end: 0x0AFF },
+    { name: 'Kannada',   start: 0x0C80, end: 0x0CFF },
+    { name: 'Tamil',     start: 0x0B80, end: 0x0BFF },
+    { name: 'Malayalam', start: 0x0D00, end: 0x0D7F },
+    { name: 'Bengali',   start: 0x0980, end: 0x09FF },
+    { name: 'Punjabi',   start: 0x0A00, end: 0x0A7F }
+  ];
+
+  const counts = {};
+  scriptRanges.forEach(s => counts[s.name] = 0);
+  let latinCount = 0;
+
+  for (let i = 0; i < clean.length; i++) {
+    const code = clean.charCodeAt(i);
+    if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
+      latinCount++;
+      continue;
+    }
+    for (const s of scriptRanges) {
+      if (code >= s.start && code <= s.end) {
+        counts[s.name]++;
+        break;
+      }
+    }
+  }
+
+  const indicTotal = Object.values(counts).reduce((a, b) => a + b, 0);
+  if (indicTotal > 0 && indicTotal >= (latinCount * 0.35)) {
+    let best = 'Telugu';
+    let maxC = 0;
+    for (const [k, v] of Object.entries(counts)) {
+      if (v > maxC) { maxC = v; best = k; }
+    }
+
+    if (best === 'Hindi') {
+      // Disambiguate Hindi vs Marathi keywords in Devanagari
+      const marathiTokens = ['आहे', 'आणि', 'नाही', 'कसे', 'काय', 'मध्ये', 'वर', 'तर', 'सांगा', 'बद्दल'];
+      const isMarathi = marathiTokens.some(t => clean.includes(t));
+      if (isMarathi) {
+        return { display: 'Marathi', code: 'Marathi', isRomanized: false };
+      }
+    }
+
+    return { display: best, code: best, isRomanized: false };
+  }
+
+  // 2. Code-mixed Romanized transliterations (Tenglish, Hinglish, etc.)
+  const words = clean.toLowerCase().match(/\b[a-z_']+\b/g) || [];
+  const tenglishWords = new Set([
+    'gurinchi', 'cheppu', 'cheppandi', 'cheyyi', 'chey', 'ela', 'enti', 'chudu',
+    'nerchuko', 'bagundi', 'telusuko', 'manchi', 'kani', 'kuda', 'ikkada', 'akkada',
+    'enduku', 'ippudu', 'undhi', 'unnadu', 'kavali', 'ardham', 'cheppava'
+  ]);
+  const hinglishWords = new Set([
+    'kaise', 'kya', 'hai', 'hain', 'batao', 'samjhao', 'mujhe', 'karna', 'karo',
+    'hoga', 'nahi', 'aur', 'lekin', 'padhai', 'seekhna', 'chahiye', 'samajh', 'bataye'
+  ]);
+  const tanglishWords = new Set([
+    'epdi', 'enna', 'solunga', 'puriyala', 'nalla', 'pannunga', 'romba', 'enga'
+  ]);
+  const kanglishWords = new Set([
+    'hege', 'yenu', 'heli', 'madi', 'channagide', 'gothilla', 'tumba', 'yaake'
+  ]);
+
+  let tenglishScore = 0, hinglishScore = 0, tanglishScore = 0, kanglishScore = 0;
+  words.forEach(w => {
+    if (tenglishWords.has(w)) tenglishScore++;
+    if (hinglishWords.has(w)) hinglishScore++;
+    if (tanglishWords.has(w)) tanglishScore++;
+    if (kanglishWords.has(w)) kanglishScore++;
+  });
+
+  const scores = [
+    { display: 'Telugu (Tenglish)', code: 'Telugu', score: tenglishScore, isRomanized: true },
+    { display: 'Hindi (Hinglish)',   code: 'Hindi',  score: hinglishScore, isRomanized: true },
+    { display: 'Tamil (Tanglish)',   code: 'Tamil',  score: tanglishScore, isRomanized: true },
+    { display: 'Kannada (Kanglish)', code: 'Kannada',score: kanglishScore, isRomanized: true }
+  ];
+  scores.sort((a, b) => b.score - a.score);
+
+  if (scores[0].score > 0) {
+    return scores[0];
+  }
+
+  return { display: 'English', code: 'English', isRomanized: false };
+}
+
+/**
+ * Populate AI Response Language selector with Auto-Detect as default
  */
 function initLanguageSelector() {
   const langSelect = document.getElementById('note-language');
-  if (!langSelect || !window.SUPPORTED_LANGUAGES) return;
+  if (!langSelect) return;
 
-  const activeLang = window.getActiveLanguage ? window.getActiveLanguage() : 'English';
   langSelect.innerHTML = '';
 
-  window.SUPPORTED_LANGUAGES.forEach(lang => {
+  // 1. Auto-Detect option (Default)
+  const autoOption = document.createElement('option');
+  autoOption.value = 'Auto';
+  autoOption.textContent = '🌐 Auto-Detect (Matches your input language)';
+  autoOption.selected = true;
+  langSelect.appendChild(autoOption);
+
+  // 2. 10 Supported Indian and International languages
+  const languages = window.SUPPORTED_LANGUAGES || [
+    { code: 'Telugu', label: 'Telugu', native: 'తెలుగు' },
+    { code: 'Hindi', label: 'Hindi', native: 'हिन्दी' },
+    { code: 'English', label: 'English', native: 'English' },
+    { code: 'Gujarati', label: 'Gujarati', native: 'ગુજરાતી' },
+    { code: 'Marathi', label: 'Marathi', native: 'मराठी' },
+    { code: 'Kannada', label: 'Kannada', native: 'ಕನ್ನಡ' },
+    { code: 'Tamil', label: 'Tamil', native: 'தமிழ்' },
+    { code: 'Malayalam', label: 'Malayalam', native: 'മലയാളം' },
+    { code: 'Bengali', label: 'Bengali', native: 'বাংলা' },
+    { code: 'Punjabi', label: 'Punjabi', native: 'ਪੰਜਾਬੀ' }
+  ];
+
+  languages.forEach(lang => {
     const option = document.createElement('option');
     option.value = lang.code;
     option.textContent = `${lang.native} (${lang.label})`;
-    if (lang.code === activeLang) option.selected = true;
     langSelect.appendChild(option);
   });
+
+  // When response language changes manually, update the feedback text
+  langSelect.addEventListener('change', updateDetectionFeedback);
+}
+
+/**
+ * Real-time Language Detection on typing in #note-topic
+ */
+function initTopicInputDetection() {
+  const topicInput = document.getElementById('note-topic');
+  if (!topicInput) return;
+
+  let debounceTimer = null;
+  topicInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const val = topicInput.value.trim();
+      if (val.length >= 2) {
+        currentDetectedLanguage = detectInputLanguage(val);
+        updateDetectionFeedback();
+      } else {
+        const feedbackEl = document.getElementById('detected-language-feedback');
+        if (feedbackEl) feedbackEl.style.display = 'none';
+      }
+    }, 120);
+  });
+}
+
+function updateDetectionFeedback() {
+  const feedbackEl = document.getElementById('detected-language-feedback');
+  const textEl = document.getElementById('detected-language-text');
+  const langSelect = document.getElementById('note-language');
+  if (!feedbackEl || !textEl) return;
+
+  const topicInput = document.getElementById('note-topic');
+  if (!topicInput || !topicInput.value.trim()) {
+    feedbackEl.style.display = 'none';
+    return;
+  }
+
+  const selectedLang = langSelect ? langSelect.value : 'Auto';
+  feedbackEl.style.display = 'block';
+
+  if (selectedLang === 'Auto') {
+    textEl.innerHTML = `🌐 Detected Input: <strong>${window.escapeHtml(currentDetectedLanguage.display)}</strong> &nbsp;•&nbsp; AI will reply in <strong>${window.escapeHtml(currentDetectedLanguage.code)}</strong>`;
+  } else {
+    textEl.innerHTML = `🌐 Detected Input: <strong>${window.escapeHtml(currentDetectedLanguage.display)}</strong> &nbsp;•&nbsp; Manual Override: <strong>${window.escapeHtml(selectedLang)}</strong>`;
+  }
 }
 
 /**
@@ -46,7 +221,6 @@ function initNotesForm() {
   const interestSelect = document.getElementById('note-interest');
   const customInterestGroup = document.getElementById('custom-interest-group');
   const customInterestInput = document.getElementById('note-custom-interest');
-  const submitBtn = document.getElementById('generate-notes-btn');
 
   // Toggle custom interest input field
   if (interestSelect && customInterestGroup) {
@@ -84,18 +258,22 @@ function initNotesForm() {
       return;
     }
 
+    // Determine target language label for progress bar
+    const targetLangDisplay = language === 'Auto' ? currentDetectedLanguage.code : language;
+
     // Enter Loading State
     setGeneratingState(true);
 
     try {
       // Simulate multi-stage AI cognitive pipeline
-      await updateStageProgress('1/3 Analyzing semantic domain & knowledge boundaries...', 600);
-      await updateStageProgress(`2/3 Translating core cognitive units into ${language}...`, 700);
-      await updateStageProgress(`3/3 Synthesizing ${style.toLowerCase()} structure tailored to ${interest === 'Custom' ? customInterest : interest}...`, 600);
+      await updateStageProgress('1/3 Analyzing semantic domain & knowledge boundaries...', 500);
+      await updateStageProgress(`2/3 Translating core cognitive units into ${targetLangDisplay}...`, 600);
+      await updateStageProgress(`3/3 Synthesizing ${style.toLowerCase()} structure tailored to ${interest === 'Custom' ? customInterest : interest}...`, 500);
 
       const note = await window.API.generateNotes({
         topic,
         language,
+        detected_language: currentDetectedLanguage.display,
         interest,
         customInterest,
         difficulty,
@@ -105,7 +283,7 @@ function initNotesForm() {
       currentGeneratedNote = note;
       renderAiResponse(note);
       setGeneratingState(false);
-      window.showToast(`AI Notes synthesized successfully in ${language}!`, 'success');
+      window.showToast(`AI Notes synthesized successfully in ${note.language}!`, 'success');
 
       // Scroll to response section smoothly on smaller devices
       const responseCard = document.getElementById('ai-response-container');
@@ -115,7 +293,7 @@ function initNotesForm() {
 
     } catch (err) {
       console.error(err);
-      window.showToast('Failed to generate AI notes. Please try again.', 'error');
+      window.showToast(err.message || 'Failed to generate AI notes. Please try again.', 'error');
       setGeneratingState(false);
     }
   });
@@ -169,9 +347,10 @@ function renderAiResponse(note) {
     <div class="note-header-banner">
       <div class="note-meta-badges">
         <span class="badge badge-cyan">🌍 ${window.escapeHtml(note.language)}</span>
+        ${note.detected_language ? `<span class="badge badge-emerald">🔍 Input: ${window.escapeHtml(note.detected_language)}</span>` : ''}
         <span class="badge badge-violet">🎯 ${window.escapeHtml(note.interest)}</span>
         <span class="badge badge-amber">📊 ${window.escapeHtml(note.difficulty)}</span>
-        <span class="badge badge-emerald">✍️ ${window.escapeHtml(note.style)}</span>
+        <span class="badge badge-emerald">✍️ ${window.escapeHtml(note.style || 'Detailed')}</span>
       </div>
       <h2 class="note-main-topic">${window.escapeHtml(note.topic)}</h2>
       <p class="note-executive-summary">${window.escapeHtml(note.summary)}</p>
@@ -216,7 +395,8 @@ function formatMarkdownStyle(text) {
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/^✓\s(.*)$/gm, '<div class="check-item"><span class="check-icon">✓</span> <span>$1</span></div>')
-    .replace(/^-\s(.*)$/gm, '<li class="note-list-item">$1</li>')
+    .replace(/^•\s(.*)$/gm, '<li class="note-list-item">$1</li>')
+    .replace(/^▸\s(.*)$/gm, '<div class="example-item"><span style="color: var(--cyan-400);">▸</span> <span>$1</span></div>')
     .replace(/\n\n/g, '<br><br>');
 }
 
@@ -247,7 +427,6 @@ function bindNoteActionEvents(note) {
   if (saveBtn) {
     saveBtn.addEventListener('click', () => {
       const savedList = JSON.parse(localStorage.getItem('vaylume_saved_notes') || '[]');
-      // Check if already saved
       if (!savedList.some(n => n.id === note.id)) {
         savedList.unshift(note);
         localStorage.setItem('vaylume_saved_notes', JSON.stringify(savedList));
@@ -259,7 +438,7 @@ function bindNoteActionEvents(note) {
     });
   }
 
-  // Listen (Simulated / Web Speech API)
+  // Listen (Web Speech API)
   const listenBtn = document.getElementById('btn-listen-note');
   if (listenBtn) {
     listenBtn.addEventListener('click', () => {
@@ -304,13 +483,13 @@ function renderSavedNotesList(filterTerm = '') {
 
   let saved = JSON.parse(localStorage.getItem('vaylume_saved_notes') || '[]');
 
-  // Seed default notes if empty for demo
   if (saved.length === 0) {
     saved = [
       {
         id: 'note_demo_1',
         topic: 'Quantum Computing Fundamentals',
         language: 'English',
+        detected_language: 'English',
         interest: 'Programming',
         difficulty: 'Intermediate',
         style: 'Detailed',
@@ -330,6 +509,7 @@ function renderSavedNotesList(filterTerm = '') {
         id: 'note_demo_2',
         topic: 'భారతీయ సంగీత రాగాలు (Indian Ragas)',
         language: 'Telugu',
+        detected_language: 'Telugu',
         interest: 'Singing',
         difficulty: 'Beginner',
         style: 'Simple',
@@ -346,7 +526,10 @@ function renderSavedNotesList(filterTerm = '') {
   }
 
   if (filterTerm) {
-    saved = saved.filter(n => n.topic.toLowerCase().includes(filterTerm) || n.language.toLowerCase().includes(filterTerm));
+    saved = saved.filter(n =>
+      n.topic.toLowerCase().includes(filterTerm) ||
+      (n.language && n.language.toLowerCase().includes(filterTerm))
+    );
   }
 
   container.innerHTML = saved.map(item => `

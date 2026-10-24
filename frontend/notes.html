@@ -98,7 +98,7 @@
         </div>
 
         <div class="topbar-actions">
-          <!-- Global Language Selector Dropdown -->
+          <!-- Global App UI Language Selector Dropdown -->
           <div class="lang-selector-wrapper">
             <button type="button" class="lang-btn" aria-haspopup="true" aria-expanded="false" id="notes-lang-btn">
               <span>🌐</span>
@@ -133,23 +133,26 @@
 
               <form id="ai-notes-form">
                 
-                <!-- Topic Input -->
+                <!-- Topic Input with Real-time Language Detection Badge -->
                 <div class="form-group">
                   <label for="note-topic" class="form-label">Topic / Concept <span class="required">*</span></label>
                   <input 
                     type="text" 
                     id="note-topic" 
                     class="form-control" 
-                    placeholder="E.g., Quantum Computing, Backpropagation, Classical Raagas, Stock Options" 
+                    placeholder="E.g., Quantum Computing, భౌతిక శాస్త్రం, DSA gurinchi, मशीन लर्निंग" 
                     required
                   >
+                  <div id="detected-language-feedback" style="display: none; margin-top: 8px; padding: 6px 12px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: var(--radius-sm); font-size: 0.82rem; color: var(--cyan-400);">
+                    <span id="detected-language-text">🌐 Input: <strong>Auto-Detecting...</strong></span>
+                  </div>
                 </div>
 
-                <!-- Language Selector (10 Languages) -->
+                <!-- Language Selector (Auto-Detect + 10 Languages) -->
                 <div class="form-group">
-                  <label for="note-language" class="form-label">Synthesis Language <span class="required">*</span></label>
+                  <label for="note-language" class="form-label">AI Response Language <span class="required">*</span></label>
                   <select id="note-language" class="form-select form-control" required>
-                    <!-- Populated dynamically by notes.js -->
+                    <!-- Populated dynamically with Auto-Detect + 10 languages by notes.js -->
                   </select>
                 </div>
 
@@ -223,14 +226,15 @@
               <div class="empty-state-icon" style="font-size: 4rem;">🧠</div>
               <h3 class="empty-state-title">AI Synthesis Studio</h3>
               <p class="empty-state-desc">
-                Select your parameters on the left and click <strong>"Generate Notes"</strong>. The AI will synthesize a custom cognitive guide tailored to your interest in your preferred language.
+                Type your topic in any language or transliteration (Telugu, Hindi, Tenglish, Hinglish, etc.). The AI automatically responds in the same language, preserving your natural script and tone.
               </p>
               <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-                <span class="badge badge-cyan">Telugu</span>
-                <span class="badge badge-violet">Hindi</span>
-                <span class="badge badge-emerald">Tamil</span>
-                <span class="badge badge-amber">Kannada</span>
-                <span class="badge badge-cyan">Gujarati</span>
+                <span class="badge badge-cyan">తెలుగు (Telugu)</span>
+                <span class="badge badge-violet">हिन्दी (Hindi)</span>
+                <span class="badge badge-emerald">ಕನ್ನಡ (Kannada)</span>
+                <span class="badge badge-amber">ગુજરાતી (Gujarati)</span>
+                <span class="badge badge-cyan">मराठी (Marathi)</span>
+                <span class="badge badge-violet">Tenglish / Hinglish</span>
               </div>
             </div>
 
