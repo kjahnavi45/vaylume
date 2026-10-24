@@ -403,7 +403,7 @@ function getActiveLanguage() {
   return localStorage.getItem('vaylume_lang') || 'English';
 }
 
-function setActiveLanguage(lang) {
+function setActiveLanguage(lang, silent = false) {
   if (!I18N_DICTIONARY[lang]) lang = 'English';
   localStorage.setItem('vaylume_lang', lang);
   applyTranslations(lang);
@@ -429,7 +429,7 @@ function setActiveLanguage(lang) {
     select.value = lang;
   });
 
-  showToast(`Language updated to ${lang}`, 'info', 2000);
+  if (!silent) showToast(`Language updated to ${lang}`, 'info', 2000);
 }
 
 function applyTranslations(lang) {
@@ -488,7 +488,7 @@ function initLanguageDropdown() {
     document.querySelectorAll('.lang-dropdown-menu.show').forEach(m => m.classList.remove('show'));
   });
 
-  // Initial translation apply
+  // Initial translation apply — silent to avoid spurious toast on page load (L7 fix)
   applyTranslations(currentLang);
   const currentLangDisplay = document.getElementById('current-lang-text');
   if (currentLangDisplay) {

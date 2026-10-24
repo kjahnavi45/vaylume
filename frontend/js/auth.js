@@ -132,8 +132,8 @@ function initLoginForm() {
     if (!password) {
       setFieldError('login-password', 'Please enter your password.');
       hasError = true;
-    } else if (password.length < 6) {
-      setFieldError('login-password', 'Password must be at least 6 characters.');
+    } else if (password.length < 8) {
+      setFieldError('login-password', 'Password must be at least 8 characters.');
       hasError = true;
     }
 

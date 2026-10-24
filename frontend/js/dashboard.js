@@ -71,7 +71,7 @@ function renderUserGreeting(profile) {
   else timeOfDay = 'Good evening';
 
   const name = profile.fullName ? profile.fullName.split(' ')[0] : 'Explorer';
-  greetingEl.innerHTML = `${timeOfDay}, <span class="text-gradient">${name}</span>`;
+  greetingEl.innerHTML = `${escapeHtml(timeOfDay)}, <span class="text-gradient">${escapeHtml(name)}</span>`;
 
   const dateSub = document.getElementById('dashboard-date-subtitle');
   if (dateSub) {
@@ -129,16 +129,16 @@ function renderRecentActivity(memories, docs, notes) {
   activityContainer.innerHTML = activities.map(act => `
     <div class="activity-item">
       <div class="activity-icon-bubble">
-        <span>${act.icon}</span>
+        <span>${escapeHtml(act.icon)}</span>
       </div>
       <div class="activity-details">
         <div class="activity-header">
-          <span class="badge ${act.badgeClass}">${act.badgeText}</span>
-          <span class="activity-time">${act.date}</span>
+          <span class="badge ${escapeHtml(act.badgeClass)}">${escapeHtml(act.badgeText)}</span>
+          <span class="activity-time">${escapeHtml(String(act.date))}</span>
         </div>
-        <h4 class="activity-title">${act.title}</h4>
+        <h4 class="activity-title">${escapeHtml(act.title)}</h4>
       </div>
-      <a href="${act.link}" class="btn btn-sm btn-outline" style="margin-left: auto;">View</a>
+      <a href="${escapeHtml(act.link)}" class="btn btn-sm btn-outline" style="margin-left: auto;">View</a>
     </div>
   `).join('');
 }
