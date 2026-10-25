@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse
 
 from config.settings import get_settings
 from routes import auth, chat, locker, memories, notes, vault
+from services.database_service import is_supabase_configured, get_service_client
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -109,8 +110,37 @@ app.include_router(chat.router,     prefix="/api/v1")
 
 # ── Health check ──────────────────────────────────────────────────────────────
 @app.get("/health", tags=["Health"], summary="Health check")
+@app.get("/api/v1/health", tags=["Health"], summary="Health check")
 def health():
-    return {"status": "ok", "version": settings.APP_VERSION}
+    supabase_configured = is_supabase_configured()
+    db_status = "connected" if supabase_configured else "mock_mode"
+    storage_status = "connected" if supabase_configured else "mock_mode"
+    detected_buckets = []
+    status_code_str = "healthy"
+
+    if supabase_configured:
+        try:
+            client = get_service_client()
+            if client:
+                client.table("memories").select("id").limit(1).execute()
+                db_status = "connected"
+                buckets = client.storage.list_buckets()
+                detected_buckets = [b.name if hasattr(b, "name") else b.get("name") for b in buckets]
+                storage_status = "connected"
+        except Exception as exc:
+            logger.warning("Supabase live connection check failed: %s", exc)
+            db_status = "error"
+            storage_status = "error"
+            status_code_str = "degraded"
+
+    return {
+        "status": status_code_str,
+        "supabase_configured": supabase_configured,
+        "database": db_status,
+        "storage": storage_status,
+        "buckets": detected_buckets,
+        "version": settings.APP_VERSION,
+    }
 
 
 @app.get("/", tags=["Root"], include_in_schema=False)
